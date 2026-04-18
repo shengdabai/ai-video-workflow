@@ -55,6 +55,7 @@ from api.routers import (
     resources_router,
     frame_router,
 )
+from api.routers.orchestrator import router as orchestrator_router
 
 
 @asynccontextmanager
@@ -133,6 +134,7 @@ app.include_router(tasks_router, prefix=api_config.api_prefix)
 app.include_router(files_router, prefix=api_config.api_prefix)
 app.include_router(resources_router, prefix=api_config.api_prefix)
 app.include_router(frame_router, prefix=api_config.api_prefix)
+app.include_router(orchestrator_router, prefix=api_config.api_prefix)
 
 
 @app.get("/")
