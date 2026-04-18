@@ -76,3 +76,12 @@ repositories/
 
 # Allow dashboard/lib (Next.js app, not Python venv)
 !dashboard/lib/
+
+# Orchestrator
+orchestrator.db
+output/shots/
+output/exports/
+
+# Dashboard build
+dashboard/.next/
+dashboard/node_modules/
