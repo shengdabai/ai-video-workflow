@@ -1,16 +1,14 @@
-<h1 align="center">🎬 Pixelle-Video —— AI 全自动短视频引擎</h1>
+<h1 align="center">🎬 AI Video Workflow —— AI 视频自动化编排系统</h1>
 
 <p align="center"><a href="README_EN.md">English</a> | <b>中文</b></p>
 
 <p align="center">
-  <a href="https://www.bilibili.com/video/BV1WzyGBnEVp/?vd_source=e7e7d4ca8db9a18c80f17a24a6582fca" target="_blank"><img src="https://img.shields.io/badge/🎥 视频教程-EA4C89" alt="视频教程"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/releases" target="_blank"><img src="https://img.shields.io/badge/📦 Windows包-50C878" alt="Windows整合包"></a>
-  <a href="https://aidc-ai.github.io/Pixelle-Video/zh" target="_blank"><img src="https://img.shields.io/badge/📘 使用文档-4A90E2" alt="使用文档"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/stargazers"><img src="https://img.shields.io/github/stars/AIDC-AI/Pixelle-Video.svg" alt="Stargazers"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/issues"><img src="https://img.shields.io/github/issues/AIDC-AI/Pixelle-Video.svg" alt="Issues"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/network/members"><img src="https://img.shields.io/github/forks/AIDC-AI/Pixelle-Video.svg" alt="Forks"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AIDC-AI/Pixelle-Video.svg" alt="License"></a>
+  <a href="https://github.com/shengdabai/ai-video-workflow/stargazers"><img src="https://img.shields.io/github/stars/shengdabai/ai-video-workflow.svg" alt="Stargazers"></a>
+  <a href="https://github.com/shengdabai/ai-video-workflow/issues"><img src="https://img.shields.io/github/issues/shengdabai/ai-video-workflow.svg" alt="Issues"></a>
+  <a href="https://github.com/shengdabai/ai-video-workflow/blob/main/LICENSE"><img src="https://img.shields.io/github/license/shengdabai/ai-video-workflow.svg" alt="License"></a>
 </p>
+
+> 基于 [Pixelle-Video](https://github.com/AIDC-AI/Pixelle-Video) 开源项目启发，在其基础上新增编排层（orchestrator）和 Next.js 控制台，构建「脚本→镜头生成→人工审核→YouTube 发布」半自动视频创作闭环。
 
 https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
 

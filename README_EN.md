@@ -1,16 +1,14 @@
-<h1 align="center">🎬 Pixelle-Video —— AI Fully Automated Short Video Engine</h1>
+<h1 align="center">🎬 AI Video Workflow —— AI Video Automation Orchestration System</h1>
 
 <p align="center"><b>English</b> | <a href="README.md">中文</a></p>
 
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=uUkx-lRxLjc" target="_blank"><img src="https://img.shields.io/badge/🎥 Video%20Tutorial-EA4C89" alt="Video Tutorial"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/releases" target="_blank"><img src="https://img.shields.io/badge/📦 Windows-50C878" alt="Windows Package"></a>
-  <a href="https://aidc-ai.github.io/Pixelle-Video" target="_blank"><img src="https://img.shields.io/badge/📘 Documentation-4A90E2" alt="Documentation"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/stargazers"><img src="https://img.shields.io/github/stars/AIDC-AI/Pixelle-Video.svg" alt="Stargazers"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/issues"><img src="https://img.shields.io/github/issues/AIDC-AI/Pixelle-Video.svg" alt="Issues"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/network/members"><img src="https://img.shields.io/github/forks/AIDC-AI/Pixelle-Video.svg" alt="Forks"></a>
-  <a href="https://github.com/AIDC-AI/Pixelle-Video/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AIDC-AI/Pixelle-Video.svg" alt="License"></a>
+  <a href="https://github.com/shengdabai/ai-video-workflow/stargazers"><img src="https://img.shields.io/github/stars/shengdabai/ai-video-workflow.svg" alt="Stargazers"></a>
+  <a href="https://github.com/shengdabai/ai-video-workflow/issues"><img src="https://img.shields.io/github/issues/shengdabai/ai-video-workflow.svg" alt="Issues"></a>
+  <a href="https://github.com/shengdabai/ai-video-workflow/blob/main/LICENSE"><img src="https://img.shields.io/github/license/shengdabai/ai-video-workflow.svg" alt="License"></a>
 </p>
+
+> Inspired by [Pixelle-Video](https://github.com/AIDC-AI/Pixelle-Video) open-source project. Built on top of it with an orchestration layer and Next.js dashboard to create a semi-automated pipeline: script → shot generation → human review → YouTube publish.
 
 https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
 
