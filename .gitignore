@@ -85,3 +85,4 @@ output/exports/
 # Dashboard build
 dashboard/.next/
 dashboard/node_modules/
+!.env.example

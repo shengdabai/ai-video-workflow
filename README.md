@@ -396,6 +396,61 @@ A: **本项目完全支持免费运行！**
 **选择建议**：本地有显卡建议完全免费方案，否则推荐使用通义千问（性价比高）
 
 
+## 🤖 编排系统（Orchestrator）
+
+> 在 Pixelle-Video 基础上新增的半自动视频创作闭环，支持脚本→镜头生成→人工审核→YouTube 发布全流程。
+
+### 架构概览
+
+```
+脚本输入 → FastAPI → SQLite 状态机 → Queue Worker → PixVerse API
+                                                        ↓
+YouTube 发布 ← 人工审核 ← review_pending ← 视频下载完成
+```
+
+### 快速启动
+
+```bash
+# 配置环境变量
+cp .env.example .env
+# 填写 PIXVERSE_API_KEY
+
+# 终端 1：FastAPI
+uvicorn api.app:app --port 8000
+
+# 终端 2：Queue Worker
+python -m orchestrator.worker
+
+# 终端 3：Dashboard
+cd dashboard && npm run dev
+```
+
+访问 **http://localhost:3000**
+
+### 环境变量
+
+| 变量 | 说明 |
+|------|------|
+| `PIXVERSE_API_KEY` | PixVerse 官方 API Key |
+| `ORCHESTRATOR_DB_PATH` | SQLite 路径（默认 `orchestrator.db`）|
+
+### YouTube 发布配置
+
+1. 在 [Google Cloud Console](https://console.cloud.google.com) 创建项目并启用 YouTube Data API v3
+2. 创建 OAuth 2.0 客户端凭据，下载 JSON
+3. 放到 `~/.config/pixelle/youtube_client_secrets.json`
+4. 首次发布时浏览器自动弹出授权，token 保存在 `~/.config/pixelle/youtube_token.pickle`
+
+### 功能路线图
+
+| 阶段 | 状态 | 内容 |
+|------|------|------|
+| 第一阶段 | ✅ 已完成 | Task Queue + PixVerse 生成 + 两级审核 + YouTube 发布 |
+| 第二阶段 | 🔜 计划中 | MoneyPrinterTurbo 参数面板集成 |
+| 第三阶段 | 🔜 计划中 | 抖音/快手/B站多平台发布 + 数据回流 |
+
+---
+
 ## 🤝 参考项目
 
 Pixelle-Video 的设计受到以下优秀开源项目的启发：

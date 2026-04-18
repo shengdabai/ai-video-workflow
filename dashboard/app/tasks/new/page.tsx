@@ -16,6 +16,16 @@ export default function NewTaskPage() {
     setLoading(true);
     try {
       const task = await api.createTask({ title, script });
+      // 每行一个镜头，过滤空行
+      const lines = script.split("\n").map(l => l.trim()).filter(Boolean);
+      if (lines.length > 0) {
+        await api.createShots(task.id, lines.map((prompt, i) => ({
+          shot_index: i,
+          prompt,
+          duration: 5.0,
+          aspect_ratio: "9:16",
+        })));
+      }
       router.push(`/tasks/${task.id}`);
     } catch (err) {
       setError(String(err));

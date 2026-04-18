@@ -392,6 +392,61 @@ A: **This project fully supports free operation!**
 **Selection Suggestion**: If you have a local GPU, recommend completely free solution, otherwise recommend using Qwen (cost-effective)
 
 
+## 🤖 Orchestrator System
+
+> A semi-automated video production pipeline built on top of Pixelle-Video: script → shot generation → human review → YouTube publish.
+
+### Architecture
+
+```
+Script Input → FastAPI → SQLite State Machine → Queue Worker → PixVerse API
+                                                                    ↓
+YouTube Publish ← Human Review ← review_pending ← Video Downloaded
+```
+
+### Quick Start
+
+```bash
+# Configure environment
+cp .env.example .env
+# Fill in PIXVERSE_API_KEY
+
+# Terminal 1: FastAPI
+uvicorn api.app:app --port 8000
+
+# Terminal 2: Queue Worker
+python -m orchestrator.worker
+
+# Terminal 3: Dashboard
+cd dashboard && npm run dev
+```
+
+Open **http://localhost:3000**
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `PIXVERSE_API_KEY` | PixVerse official API Key |
+| `ORCHESTRATOR_DB_PATH` | SQLite path (default: `orchestrator.db`) |
+
+### YouTube Publish Setup
+
+1. Create a project in [Google Cloud Console](https://console.cloud.google.com) and enable YouTube Data API v3
+2. Create OAuth 2.0 client credentials and download the JSON file
+3. Place it at `~/.config/pixelle/youtube_client_secrets.json`
+4. On first publish, browser opens for authorization — token saved to `~/.config/pixelle/youtube_token.pickle`
+
+### Roadmap
+
+| Phase | Status | Features |
+|-------|--------|----------|
+| Phase 1 | ✅ Done | Task Queue + PixVerse generation + two-level review + YouTube publish |
+| Phase 2 | 🔜 Planned | MoneyPrinterTurbo parameter panel integration |
+| Phase 3 | 🔜 Planned | Multi-platform publish (Douyin/Kuaishou/Bilibili) + analytics feedback |
+
+---
+
 ## 🤝 Referenced Projects
 
 Pixelle-Video design is inspired by the following excellent open-source projects:

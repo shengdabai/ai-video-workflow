@@ -1,6 +1,9 @@
 from __future__ import annotations
 import asyncio
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent.parent / ".env")
 from orchestrator.db import init_db
 from orchestrator.queue.manager import QueueManager
 from orchestrator.assets.manager import AssetManager
