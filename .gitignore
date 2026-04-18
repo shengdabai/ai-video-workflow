@@ -73,3 +73,6 @@ examples/
 repositories/
 
 *.out
+
+# Allow dashboard/lib (Next.js app, not Python venv)
+!dashboard/lib/
