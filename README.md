@@ -1,489 +1,264 @@
-<h1 align="center">🎬 AI Video Workflow —— AI 视频自动化编排系统</h1>
+# 🎬 AI Video Workflow
 
-<p align="center"><a href="README_EN.md">English</a> | <b>中文</b></p>
+<p align="center"><b>English</b> | <a href="#中文">中文</a></p>
 
 <p align="center">
-  <a href="https://github.com/shengdabai/ai-video-workflow/stargazers"><img src="https://img.shields.io/github/stars/shengdabai/ai-video-workflow.svg" alt="Stargazers"></a>
-  <a href="https://github.com/shengdabai/ai-video-workflow/issues"><img src="https://img.shields.io/github/issues/shengdabai/ai-video-workflow.svg" alt="Issues"></a>
-  <a href="https://github.com/shengdabai/ai-video-workflow/blob/main/LICENSE"><img src="https://img.shields.io/github/license/shengdabai/ai-video-workflow.svg" alt="License"></a>
+  <a href="https://github.com/shengdabai/ai-video-workflow/commits/main"><img src="https://img.shields.io/github/last-commit/shengdabai/ai-video-workflow?color=blue" alt="Last commit"></a>
+  <a href="https://github.com/shengdabai/ai-video-workflow/stargazers"><img src="https://img.shields.io/github/stars/shengdabai/ai-video-workflow?style=social" alt="Stars"></a>
+  <a href="https://github.com/shengdabai"><img src="https://img.shields.io/github/followers/shengdabai?label=Follow%20%40shengdabai&style=social" alt="Follow"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/shengdabai/ai-video-workflow?color=green" alt="License"></a>
 </p>
 
-> 基于 [Pixelle-Video](https://github.com/AIDC-AI/Pixelle-Video) 开源项目启发，在其基础上新增编排层（orchestrator）和 Next.js 控制台，构建「脚本→镜头生成→人工审核→YouTube 发布」半自动视频创作闭环。
+> **Turn one topic into a published video — script, shots, review, and YouTube upload, on autopilot.**
 
-https://github.com/user-attachments/assets/a42e7457-fcc8-40da-83fc-784c45a8b95d
+An end-to-end AI video automation system that orchestrates the full pipeline: **script → shot generation → human review → YouTube publish**. It wraps an AI-driven video generator with a durable task queue, two-level review gates, and a one-click publisher — so a single topic becomes a finished, reviewed, uploaded video.
 
-<br/>
+## 💡 Why
 
-只需输入一个 **主题**，Pixelle-Video 就能自动完成：
-- ✍️ 撰写视频文案  
-- 🎨 生成 AI 配图/视频  
-- 🗣️ 合成语音解说  
-- 🎵 添加背景音乐  
-- 🎬 一键合成视频  
+Generating one AI clip is easy. Running a *repeatable production line* — many shots per video, retries on failure, a human checkpoint before anything goes public, and a hands-off upload — is the hard part. This project is the orchestration layer that makes AI video creation reliable and unattended, built and run in public by a Chinese-language teacher who needs to ship educational video at volume.
 
-**零门槛，零剪辑经验**，让视频创作成为一句话的事！
+## ✨ What it does
 
+A topic enters one end; a reviewed, published video comes out the other. Each stage is a real, code-backed component:
 
-## 🖥️ Web 界面预览
+- **📝 Script & shot planning** — a topic/script is turned into ordered shot tasks, each with its own prompt, duration, and aspect ratio.
+- **🎨 Shot generation** — shots are generated through a pluggable provider interface (PixVerse API today), plus the Pixelle-Video engine for AI image/video, TTS narration, and background music.
+- **✅ Two-level review** — a human approves at both the **video** level and the individual **shot** level; rejected shots can be re-prompted and regenerated without restarting the job.
+- **🎬 Compose** — approved clips are stitched with `ffmpeg` and optional BGM into a final cut.
+- **🚀 YouTube publish** — the final video is uploaded via the YouTube Data API with OAuth2 (title, description, tags, privacy, thumbnail).
 
-![Web UI界面](resources/webui.png)
+## 🧱 Pipeline & architecture
 
-
-## 📋 最近更新
-
-- ✅ **2026-01-26**: 新增「动作迁移」模块，上传参考视频和图片进行动作迁移
-- ✅ **2026-01-14**: 新增「数字人口播」和「图生视频」流水线，新增多语言 TTS 音色支持
-- ✅ **2026-01-06**: 新增 RunningHub 48G 显存机器调用支持
-- ✅ **2025-12-28**: 支持 RunningHub 并发限制可配置，优化 LLM 返回结构化数据的逻辑
-- ✅ **2025-12-17**: 支持 ComfyUI API Key 配置，支持 Nano Banana 模型调用，API 接口支持模板自定义参数
-- ✅ **2025-12-10**: 侧边栏内置 FAQ，锁定 edge-tts 版本修复 TTS 服务不稳定问题
-- ✅ **2025-12-08**: 支持固定脚本多种分割方式(段落/行/句子)，优化模板选择交互逻辑支持直接预览选择
-- ✅ **2025-12-06**: 修复视频生成 API 返回 URL 路径处理，支持跨平台兼容
-- ✅ **2025-12-05**: 新增 Windows 整合包下载，优化图片与视频反推工作流
-- ✅ **2025-12-04**: 新增「自定义素材」功能，支持用户上传自己的照片和视频，AI 智能分析生成脚本
-- ✅ **2025-11-18**: 优化 RunningHub 服务调用支持并行处理，新增历史记录页面，支持批量创建视频任务
-
-
-## ✨ 功能亮点
-
-- ✅ **全自动生成** - 输入主题，自动生成完整视频
-- ✅ **AI 智能文案** - 根据主题智能创作解说词，无需自己写脚本
-- ✅ **AI 生成配图** - 每句话都配上精美的 AI 插图
-- ✅ **AI 生成视频** - 支持使用 AI 视频生成模型（如 WAN 2.1）创建动态视频内容
-- ✅ **AI 生成语音** - 支持 Edge-TTS、Index-TTS 等众多主流 TTS 方案
-- ✅ **背景音乐** - 支持添加 BGM，让视频更有氛围
-- ✅ **视觉风格** - 多种模板可选，打造独特视频风格
-- ✅ **灵活尺寸** - 支持竖屏、横屏等多种视频尺寸
-- ✅ **多种 AI 模型** - 支持 GPT、通义千问、DeepSeek、Ollama 等
-- ✅ **原子能力灵活组合** - 基于 ComfyUI 架构，可使用预置工作流，也可自定义任意能力（如替换生图模型为 FLUX、替换 TTS 为 ChatTTS 等）
-
-
-## 📊 视频生成流程
-
-Pixelle-Video 采用模块化设计，整个视频生成流程清晰简洁：
-
-![视频生成流程图](resources/flow.png)
-
-从输入文本到最终视频输出，整个流程简洁清晰：**文案生成 → 配图规划 → 逐帧处理 → 视频合成**
-
-每个环节都支持灵活定制，可选择不同的 AI 模型、音频引擎、视觉风格等，满足个性化创作需求。
-
-
-## 🎬 视频示例
-
-以下是使用 Pixelle-Video 生成的实际案例，展示了不同主题和风格的视频效果：
-
-### 📱 扩展模块视频展示
-
-<table>
-<tr>
-<td width="33%">
-<h3>👤 数字人口播</h3>
-<video src="https://github.com/user-attachments/assets/7c122563-c2e0-4dcd-a73c-25ba1d4fa2dd" controls width="100%"></video>
-<p align="center"><b>韩语数字人口播</b></p>
-</td>
-<td width="33%">
-<h3>🖼️ 图生视频</h3>
-<video src="https://github.com/user-attachments/assets/5b4eef17-07d0-4bde-9748-2ed68cc9888e" controls width="100%"></video>
-<p align="center"><b>卡通视频</b></p>
-</td>
-<td width="33%">
-<h3>💃 动作迁移</h3>
-<video src="https://github.com/user-attachments/assets/7b1240bc-e965-434c-b343-118ec4793d4f" controls width="100%"></video>
-<p align="center"><b>跳舞小猫</b></p>
-</td>
-</tr>
-</table>
-
-
-### 📱 竖屏视频展示
-
-<table>
-<tr>
-<td width="33%">
-<h3>🌄 人文纪实类 - 视频默认模版</h3>
-<video src="https://github.com/user-attachments/assets/e6716c1d-78de-453d-84c2-10873c8c595f" controls width="100%"></video>
-<p align="center"><b>旅行路上的风景让人流连忘返</b></p>
-</td>
-<td width="33%">
-<h3>🔍 文化解构类 - 视频默认模版</h3>
-<video src="https://github.com/user-attachments/assets/f5de75f6-135a-4ab4-9f5f-079f649764d5" controls width="100%"></video>
-<p align="center"><b>Santa ID</b></p>
-</td>
-<td width="33%">
-<h3>🔭 科学思辨类 - 视频默认模版</h3>
-<video src="https://github.com/user-attachments/assets/ceb8b0df-8331-4e1f-88e7-db5b295a1c1d" controls width="100%"></video>
-<p align="center"><b>为什么我们还没有找到外星文明？</b></p>
-</td>
-</tr>
-<tr>
-<td width="33%">
-<h3>🌱 个人成长类 - 克隆音色</h3>
-<video src="https://github.com/user-attachments/assets/1bad9a49-df83-4905-9cc8-9a7640e9c7d8" controls width="100%"></video>
-<p align="center"><b>如何提升自己</b></p>
-</td>
-<td width="33%">
-<h3>🧠 深度思考类 - 默认模板</h3>
-<video src="https://github.com/user-attachments/assets/663b705a-2aea-44bc-b266-4bb27aa255a8" controls width="100%"></video>
-<p align="center"><b>如何理解反脆弱</b></p>
-</td>
-<td width="33%">
-<h3>🏯 历史文化类 - 固定画面</h3>
-<video src="https://github.com/user-attachments/assets/56e0a018-fa99-47eb-a97f-fc2fa8915724" controls width="100%"></video>
-<p align="center"><b>资治通鉴</b></p>
-</td>
-</tr>
-<tr>
-<td width="33%">
-<h3>☀️ 情感类 - 克隆音色</h3>
-<video src="https://github.com/user-attachments/assets/4687df95-dd21-4a7b-b01e-f33a7b646644" controls width="100%"></video>
-<p align="center"><b>冬日暖阳</b></p>
-</td>
-<td width="33%">
-<h3>📜 小说解说类 - 自创脚本</h3>
-<video src="https://github.com/user-attachments/assets/d354465e-3fa8-40b4-93e9-61ad75ef0697" controls width="100%"></video>
-<p align="center"><b>斗破苍穹</b></p>
-</td>
-<td width="33%">
-<h3>🧬 知识科普类 - Qwen生图</h3>
-<video src="https://github.com/user-attachments/assets/8ac21768-41ce-4d41-acdd-e3dd3eb9725a" controls width="100%"></video>
-<p align="center"><b>养生知识</b></p>
-</td>
-</tr>
-</table>
-
-### 🖥️ 横屏视频展示
-
-<table>
-<tr>
-<td width="50%">
-<h3>💰 副业赚钱 - 电影模板</h3>
-<video src="https://github.com/user-attachments/assets/c9209d4e-73a6-4b82-aaad-cf102248c9e2" controls width="100%"></video>
-<p align="center"><b>副业赚钱</b></p>
-</td>
-<td width="50%">
-<h3>🏛️ 历史解说 - 自定义模板</h3>
-<video src="https://github.com/user-attachments/assets/a767c452-d5f1-4cff-bb34-b80fff0d4c3e" controls width="100%"></video>
-<p align="center"><b>资治通鉴启示录</b></p>
-</td>
-</tr>
-</table>
-
-> 💡 **提示**: 这些视频都是通过输入一个主题关键词，由 AI 全自动生成的，无需任何视频剪辑经验！
-
-
-<div id="tutorial-start" />
-
-
-## 🚀 快速开始
-
-### 🪟 Windows 一键整合包（推荐 Windows 用户使用）
-
-**无需安装 Python、uv 或 ffmpeg，一键开箱即用！**
-
-👉 **[下载 Windows 一键整合包](https://github.com/AIDC-AI/Pixelle-Video/releases/latest)**
-
-1. 下载最新的 Windows 一键整合包并解压
-2. 双击运行 `start.bat` 启动 Web 界面
-3. 浏览器会自动打开 http://localhost:8501
-4. 在「⚙️ 系统配置」中配置 LLM API 和图像生成服务
-5. 开始生成视频！
-
-> 💡 **提示**: 整合包已包含所有依赖，无需手动安装任何环境。首次使用只需配置 API 密钥即可。
-
-
-### 从源码安装（适合 macOS / Linux 用户或需要自定义的用户）
-
-#### 前置环境依赖
-
-在开始之前，需要先安装 Python 包管理器 `uv` 和视频处理工具 `ffmpeg`：
-
-##### 安装 uv
-
-请访问 uv 官方文档查看适合你系统的安装方法：  
-👉 **[uv 安装指南](https://docs.astral.sh/uv/getting-started/installation/)**
-
-安装完成后，在终端中运行 `uv --version` 验证安装成功。
-
-##### 安装 ffmpeg
-
-**macOS**
-```bash
-brew install ffmpeg
+```
+topic / script
+      │
+      ▼
+┌────────────────┐   FastAPI + SQLite task queue (VideoTask → ShotTask → Asset)
+│  Orchestrator  │   • durable state machine  • concurrency cap  • auto-retry
+└────────────────┘
+      │
+      ▼
+┌────────────────┐   pluggable VideoProvider (PixVerse) + Pixelle-Video engine
+│ Shot generation│   • AI image/video  • TTS  • BGM
+└────────────────┘
+      │
+      ▼
+┌────────────────┐   two-level review gate (video + shot)
+│     Review     │   • approve / reject / re-prompt  • asset replacement
+└────────────────┘
+      │
+      ▼
+┌────────────────┐   ffmpeg compose → YouTube Data API (OAuth2)
+│Compose & Publish│
+└────────────────┘
 ```
 
-**Ubuntu / Debian**
-```bash
-sudo apt update
-sudo apt install ffmpeg
-```
+- **Worker loop** (`orchestrator/worker.py`): polls pending shots, submits to the provider (max 3 concurrent), downloads finished clips, retries up to 3× on failure, and moves shots into `review_pending`.
+- **State machine**: `pending → generating → review_pending → approved → published` (with `failed` / `rejected` branches).
+- **Assets**: every artifact (clip, image, audio, subtitle, cover, export) is tracked independently in SQLite.
 
-**Windows**
-- 下载地址：https://ffmpeg.org/download.html
-- 下载后解压，将 `bin` 目录添加到系统环境变量 PATH 中
+## 🛠️ Tech stack
 
-安装完成后，在终端中运行 `ffmpeg -version` 验证安装成功。
+| Layer | Stack |
+|------|-------|
+| Backend / API | Python 3.11+, FastAPI, Uvicorn, Pydantic |
+| Orchestration | Async worker, SQLite (`aiosqlite`), httpx |
+| Generation | PixVerse API, ComfyUI / RunningHub workflows, `edge-tts`, OpenAI-compatible LLM |
+| Media | `ffmpeg` / `moviepy`, Pillow |
+| Web UIs | Streamlit (Pixelle-Video) + Next.js / TypeScript dashboard |
+| Publishing | YouTube Data API (`google-api-python-client`, OAuth2) |
+| Ops | Docker / docker-compose, pytest |
 
+## 🚀 Quick start
 
-#### 第一步：下载项目
+> Requires Python 3.11+, `ffmpeg`, and Node.js (for the dashboard).
 
 ```bash
-git clone https://github.com/AIDC-AI/Pixelle-Video.git
-cd Pixelle-Video
-```
+git clone https://github.com/shengdabai/ai-video-workflow.git
+cd ai-video-workflow
 
-#### 第二步：启动 Web 界面
+# 1. Install (pip or uv)
+python -m venv .venv && source .venv/bin/activate
+pip install -e .            # or: uv sync
 
-```bash
-# 使用 uv 运行（推荐，会自动安装依赖）
-uv run streamlit run web/app.py
-```
-
-浏览器会自动打开 http://localhost:8501
-
-#### 第三步：在 Web 界面配置
-
-首次使用时，展开「⚙️ 系统配置」面板，填写：
-- **LLM 配置**: 选择 AI 模型（如通义千问、GPT 等）并填入 API Key
-- **图像配置**: 如需生成图片，配置 ComfyUI 地址或 RunningHub API Key
-
-配置好后点击「保存配置」，就可以开始生成视频了！
-
-<div id="tutorial-end" />
-
-## 💻 使用方法
-
-打开 Web 界面后，你会看到三栏布局，下面详细讲解每个部分：
-
-
-### ⚙️ 系统配置（首次必填）
-
-首次使用时需要配置，点击展开「⚙️ 系统配置」面板：
-
-#### 1. LLM 配置（大语言模型）
-用于生成视频文案的 AI。
-
-**快速选择预设**  
-- 通过下拉菜单选择预设模型（通义千问、GPT-4o、DeepSeek 等）
-- 选择后会自动填充 base_url 和 model
-- 点击「🔑 获取 API Key」链接去注册并获取密钥
-
-**手动配置**  
-- API Key: 填入你的密钥
-- Base URL: API 地址
-- Model: 模型名称
-
-#### 2. 图像配置
-用于生成视频配图的 AI。
-
-**本地部署（推荐）**  
-- ComfyUI URL: 本地 ComfyUI 服务地址（默认 http://127.0.0.1:8188）
-- 点击「测试连接」确认服务可用
-
-**云端部署**  
-- RunningHub API Key: 云端图像生成服务的密钥
-
-配置完成后点击「保存配置」。
-
-
-### 📝 内容输入（左侧栏）
-
-#### 生成模式
-- **AI 生成内容**: 输入主题，AI 自动创作文案
-  - 适合：想快速生成视频，让 AI 写稿
-  - 例如：「为什么要养成阅读习惯」
-- **固定文案内容**: 直接输入完整文案，跳过 AI 创作
-  - 适合：已有现成文案，直接生成视频
-
-#### 背景音乐（BGM）
-- **无 BGM**: 纯人声解说
-- **内置音乐**: 选择预置的背景音乐（如 default.mp3）
-- **自定义音乐**: 将你的音乐文件（MP3/WAV 等）放到 `bgm/` 文件夹
-- 点击「试听 BGM」可以预览音乐
-
-
-### 🎤 语音设置（中间栏）
-
-#### TTS 工作流
-- 从下拉菜单选择 TTS 工作流（支持 Edge-TTS、Index-TTS 等）
-- 系统会自动扫描 `workflows/` 文件夹中的 TTS 工作流
-- 如果懂 ComfyUI，可以自定义 TTS 工作流
-
-#### 参考音频（可选）
-- 上传参考音频文件用于声音克隆（支持 MP3/WAV/FLAC 等格式）
-- 适用于支持声音克隆的 TTS 工作流（如 Index-TTS）
-- 上传后可以直接试听
-
-#### 预览功能
-- 输入测试文本，点击「预览语音」即可试听效果
-- 支持使用参考音频进行预览
-
-
-### 🎨 视觉设置（中间栏）
-
-#### 图像生成
-决定 AI 生成什么风格的配图。
-
-**ComfyUI 工作流**  
-- 从下拉菜单选择图像生成工作流
-- 支持本地部署（selfhost）和云端（RunningHub）工作流
-- 默认使用 `image_flux.json`
-- 如果懂 ComfyUI，可以放自己的工作流到 `workflows/` 文件夹
-
-**图像尺寸**  
-- 设置生成图像的宽度和高度（单位：像素）
-- 默认 1024x1024，可根据需要调整
-- 注意：不同的模型对尺寸有不同的限制
-
-**提示词前缀（Prompt Prefix）**  
-- 控制图像的整体风格（语言需要是英文的）
-- 例如：Minimalist black-and-white matchstick figure style illustration, clean lines, simple sketch style
-- 点击「预览风格」可以测试效果
-
-#### 视频模板
-决定视频画面的布局和设计。
-
-**模板命名规范**  
-- `static_*.html`: 静态模板（无需AI生成媒体，纯文字样式）
-- `image_*.html`: 图片模板（使用AI生成的图片作为背景）
-- `video_*.html`: 视频模板（使用AI生成的视频作为背景）
-
-**使用方法**  
-- 从下拉菜单选择模板，按尺寸分组显示（竖屏/横屏/方形）
-- 点击「预览模板」可以自定义参数测试效果
-- 如果懂 HTML，可以在 `templates/` 文件夹创建自己的模板
-- 🔗 [查看所有模板效果图](https://aidc-ai.github.io/Pixelle-Video/zh/user-guide/templates/#_3)
-
-
-### 🎬 生成视频（右侧栏）
-
-#### 生成按钮
-- 配置好所有参数后，点击「🎬 生成视频」
-- 会显示实时进度（生成文案 → 生成配图 → 合成语音 → 合成视频）
-- 生成完成后自动显示视频预览
-
-#### 进度显示
-- 实时显示当前步骤
-- 例如：「分镜 3/5 - 生成插图」
-
-#### 视频预览
-- 生成完成后自动播放
-- 显示视频时长、文件大小、分镜数等信息
-- 视频文件保存在 `output/` 文件夹
-
-
-### ❓ 常见问题
-
-**Q: 第一次使用需要多久？**  
-A: 生成时长取决于视频分镜数量、网络状况和 AI 推理速度，通常几分钟内即可完成。
-
-**Q: 视频效果不满意怎么办？**  
-A: 可以尝试：
-1. 更换 LLM 模型（不同模型文案风格不同）
-2. 调整图像尺寸和提示词前缀（改变配图风格）
-3. 更换 TTS 工作流或上传参考音频（改变语音效果）
-4. 尝试不同的视频模板和尺寸
-
-**Q: 费用大概多少？**  
-A: **本项目完全支持免费运行！**
-
-- **完全免费方案**: LLM 使用 Ollama（本地运行）+ ComfyUI 本地部署 = 0 元
-- **推荐方案**: LLM 使用通义千问（成本极低，性价比高）+ ComfyUI 本地部署
-- **云端方案**: LLM 使用 OpenAI + 图像使用 RunningHub（费用较高但无需本地环境）
-
-**选择建议**：本地有显卡建议完全免费方案，否则推荐使用通义千问（性价比高）
-
-
-## 🤖 编排系统（Orchestrator）
-
-> 在 Pixelle-Video 基础上新增的半自动视频创作闭环，支持脚本→镜头生成→人工审核→YouTube 发布全流程。
-
-### 架构概览
-
-```
-脚本输入 → FastAPI → SQLite 状态机 → Queue Worker → PixVerse API
-                                                        ↓
-YouTube 发布 ← 人工审核 ← review_pending ← 视频下载完成
-```
-
-### 快速启动
-
-```bash
-# 配置环境变量
+# 2. Configure secrets (placeholders only — never commit real keys)
 cp .env.example .env
-# 填写 PIXVERSE_API_KEY
+#   PIXVERSE_API_KEY=your-pixverse-api-key-here
+#   YOUTUBE_CLIENT_SECRET=your-youtube-client-secret-here
+#   ORCHESTRATOR_DB_PATH=orchestrator.db
+cp config.example.yaml config.yaml     # set LLM / ComfyUI options
 
-# 终端 1：FastAPI
-uvicorn api.app:app --port 8000
-
-# 终端 2：Queue Worker
-python -m orchestrator.worker
-
-# 终端 3：Dashboard
-cd dashboard && npm run dev
+# 3. Run the three processes
+uvicorn api.app:app --reload --port 8000   # terminal 1: API
+python -m orchestrator.worker              # terminal 2: queue worker
+cd dashboard && npm install && npm run dev # terminal 3: dashboard
 ```
 
-访问 **http://localhost:3000**
+Open **http://localhost:3000** for the dashboard (API docs at **http://localhost:8000/docs**).
 
-### 环境变量
+**First YouTube authorization:** place your Google Cloud OAuth2 client secrets at `~/.config/pixelle/youtube_client_secrets.json`. The first publish opens a browser to authorize; the token is cached at `~/.config/pixelle/youtube_token.pickle`.
 
-| 变量 | 说明 |
-|------|------|
-| `PIXVERSE_API_KEY` | PixVerse 官方 API Key |
-| `ORCHESTRATOR_DB_PATH` | SQLite 路径（默认 `orchestrator.db`）|
+```bash
+# Run tests
+python -m pytest tests/orchestrator/ tests/api/ -v
+```
 
-### YouTube 发布配置
+## 📖 How the pipeline works
 
-1. 在 [Google Cloud Console](https://console.cloud.google.com) 创建项目并启用 YouTube Data API v3
-2. 创建 OAuth 2.0 客户端凭据，下载 JSON
-3. 放到 `~/.config/pixelle/youtube_client_secrets.json`
-4. 首次发布时浏览器自动弹出授权，token 保存在 `~/.config/pixelle/youtube_token.pickle`
+1. **Create a video task** — POST a title + script to `/orchestrator`; it becomes a `VideoTask`.
+2. **Generate shots** — shots are enqueued as `ShotTask`s and picked up by the worker, which submits them to the provider and downloads finished clips.
+3. **Review** — approve the video and/or individual shots in the dashboard; reject + re-prompt any shot to regenerate it.
+4. **Compose** — approved clips are concatenated (with optional BGM) into the final export.
+5. **Publish** — the composed video is uploaded to YouTube and recorded as a `PublishRecord`.
 
-### 功能路线图
+## 🗺️ Status
 
-| 阶段 | 状态 | 内容 |
-|------|------|------|
-| 第一阶段 | ✅ 已完成 | Task Queue + PixVerse 生成 + 两级审核 + YouTube 发布 |
-| 第二阶段 | 🔜 计划中 | MoneyPrinterTurbo 参数面板集成 |
-| 第三阶段 | 🔜 计划中 | 抖音/快手/B站多平台发布 + 数据回流 |
+Actively developed and run in public. **Phase 1 (current):** task queue, asset management, PixVerse provider, two-level review, semi-automatic YouTube publish. **Roadmap:** richer generation parameter panels, multi-platform publishing (Douyin / Kuaishou / Bilibili), and publish-analytics feeding the next round of topic selection. Provider and platform interfaces are intentionally pluggable.
+
+This project builds an orchestration + dashboard layer on top of, and is inspired by, the open-source [Pixelle-Video](https://github.com/AIDC-AI/Pixelle-Video) generation engine.
+
+## 🤝 Connect & about
+
+Built by **[@shengdabai](https://github.com/shengdabai)** — a Chinese-language teacher (6000+ students) building AI + Chinese-teaching tools in public.
+
+If this is useful, please **⭐ star the repo** and **follow [@shengdabai](https://github.com/shengdabai)** to follow along.
+
+Related projects:
+- **[content-creator-hub](https://github.com/shengdabai/content-creator-hub)** — content creation tooling
+- **[ai-video-generator](https://github.com/shengdabai/ai-video-generator)** — AI video generation
+- **[chinese-teaching-video-system](https://github.com/shengdabai/chinese-teaching-video-system)** — Chinese-teaching video system
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE).
 
 ---
 
-## 🤝 参考项目
+<a name="中文"></a>
 
-Pixelle-Video 的设计受到以下优秀开源项目的启发：
+# 🎬 AI Video Workflow
 
-- [Pixelle-MCP](https://github.com/AIDC-AI/Pixelle-MCP) - ComfyUI MCP 服务器，让 AI 助手直接调用 ComfyUI
-- [MoneyPrinterTurbo](https://github.com/harry0703/MoneyPrinterTurbo) - 优秀的视频生成工具
-- [NarratoAI](https://github.com/linyqh/NarratoAI) - 影视解说自动化工具
-- [MoneyPrinterPlus](https://github.com/ddean2009/MoneyPrinterPlus) - 视频创作平台
-- [ComfyKit](https://github.com/puke3615/ComfyKit) - ComfyUI 工作流封装库
+<p align="center"><a href="#-ai-video-workflow">English</a> | <b>中文</b></p>
 
-感谢这些项目的开源精神！🙏
+> **一个主题，自动产出一条已发布的视频 —— 文案、分镜、审核、YouTube 上传全程托管。**
 
+端到端的 AI 视频自动化编排系统，串起完整流水线：**脚本 → 分镜生成 → 人工审核 → YouTube 发布**。它在 AI 视频生成引擎之上，叠加了一个可恢复的任务队列、双层审核闸门与一键发布器 —— 让一个主题变成一条已审核、已上传的成品视频。
 
-## 💬 社区交流
+## 💡 为什么做这个
 
-扫描下方二维码加入我们的社区，获取最新动态和技术支持：
+生成单条 AI 片段很容易；难的是跑一条**可复用的生产线** —— 一条视频多个分镜、失败自动重试、公开前有人工卡点、上传无人值守。本项目就是让 AI 视频创作变得可靠、可托管的编排层，由一位需要批量产出教学视频的中文老师在公开构建。
 
-| 微信群 | Discord 社区 |
-| ---- | ---- |
-| <img src="resources/wechat.png" alt="微信交流群" width="250" /> | <img src="resources/discord.png" alt="Discord 社区" width="250" /> |
+## ✨ 它能做什么
 
+主题从一端进入，审核并发布后的视频从另一端产出。每个阶段都有真实的代码组件支撑：
 
-## 📢 反馈与支持
+- **📝 文案与分镜规划** —— 把主题/脚本拆成有序的分镜任务，每个分镜带自己的提示词、时长与画幅。
+- **🎨 分镜生成** —— 通过可插拔的 Provider 接口生成（当前为 PixVerse API），并结合 Pixelle-Video 引擎完成 AI 配图/视频、TTS 语音解说与背景音乐。
+- **✅ 双层审核** —— 人工在**视频级**与单个**分镜级**两层审批；被拒绝的分镜可重写提示词并重新生成，无需重启整个任务。
+- **🎬 合成** —— 审核通过的片段用 `ffmpeg` 拼接，可叠加 BGM，输出成片。
+- **🚀 YouTube 发布** —— 成片经 YouTube Data API + OAuth2 上传（标题、描述、标签、隐私、封面）。
 
-- 🐛 **遇到问题**: 提交 [Issue](https://github.com/AIDC-AI/Pixelle-Video/issues)
-- 💡 **功能建议**: 提交 [Feature Request](https://github.com/AIDC-AI/Pixelle-Video/issues)
-- ⭐ **给个 Star**: 如果这个项目对你有帮助，欢迎给个 Star 支持一下！
+## 🧱 流水线与架构
 
+```
+主题 / 脚本
+      │
+      ▼
+┌────────────────┐   FastAPI + SQLite 任务队列（VideoTask → ShotTask → Asset）
+│    编排层      │   • 可恢复状态机  • 并发上限  • 自动重试
+└────────────────┘
+      │
+      ▼
+┌────────────────┐   可插拔 VideoProvider（PixVerse）+ Pixelle-Video 引擎
+│   分镜生成     │   • AI 配图/视频  • TTS  • BGM
+└────────────────┘
+      │
+      ▼
+┌────────────────┐   双层审核闸门（视频级 + 分镜级）
+│     审核       │   • 通过 / 拒绝 / 重写提示词  • 素材替换
+└────────────────┘
+      │
+      ▼
+┌────────────────┐   ffmpeg 合成 → YouTube Data API（OAuth2）
+│   合成与发布   │
+└────────────────┘
+```
 
-## 📝 许可证
+- **Worker 循环**（`orchestrator/worker.py`）：轮询待处理分镜，提交给 Provider（最多 3 并发），下载完成片段，失败最多重试 3 次，并把分镜推入 `review_pending`。
+- **状态机**：`pending → generating → review_pending → approved → published`（含 `failed` / `rejected` 分支）。
+- **素材管理**：所有产出物（片段、图片、音频、字幕、封面、导出文件）在 SQLite 中独立追踪。
 
-本项目采用 Apache 2.0 许可证，详情请查看 [LICENSE](LICENSE) 文件。
+## 🛠️ 技术栈
 
+| 层 | 技术 |
+|------|-------|
+| 后端 / API | Python 3.11+、FastAPI、Uvicorn、Pydantic |
+| 编排 | 异步 Worker、SQLite（`aiosqlite`）、httpx |
+| 生成 | PixVerse API、ComfyUI / RunningHub 工作流、`edge-tts`、OpenAI 兼容 LLM |
+| 媒体 | `ffmpeg` / `moviepy`、Pillow |
+| Web 界面 | Streamlit（Pixelle-Video）+ Next.js / TypeScript 控制台 |
+| 发布 | YouTube Data API（`google-api-python-client`、OAuth2） |
+| 运维 | Docker / docker-compose、pytest |
 
-## ⭐ Star History
+## 🚀 快速开始
 
-[![Star History Chart](https://api.star-history.com/svg?repos=AIDC-AI/Pixelle-Video&type=Date)](https://star-history.com/#AIDC-AI/Pixelle-Video&Date)
+> 需要 Python 3.11+、`ffmpeg`，以及 Node.js（控制台用）。
 
+```bash
+git clone https://github.com/shengdabai/ai-video-workflow.git
+cd ai-video-workflow
+
+# 1. 安装（pip 或 uv）
+python -m venv .venv && source .venv/bin/activate
+pip install -e .            # 或：uv sync
+
+# 2. 配置密钥（仅占位符 —— 切勿提交真实 key）
+cp .env.example .env
+#   PIXVERSE_API_KEY=your-pixverse-api-key-here
+#   YOUTUBE_CLIENT_SECRET=your-youtube-client-secret-here
+#   ORCHESTRATOR_DB_PATH=orchestrator.db
+cp config.example.yaml config.yaml     # 设置 LLM / ComfyUI 选项
+
+# 3. 启动三个进程
+uvicorn api.app:app --reload --port 8000   # 终端 1：API
+python -m orchestrator.worker              # 终端 2：队列 Worker
+cd dashboard && npm install && npm run dev # 终端 3：控制台
+```
+
+打开 **http://localhost:3000** 进入控制台（API 文档在 **http://localhost:8000/docs**）。
+
+**首次 YouTube 授权：** 把 Google Cloud OAuth2 client secrets 放到 `~/.config/pixelle/youtube_client_secrets.json`。首次发布会打开浏览器完成授权，token 缓存在 `~/.config/pixelle/youtube_token.pickle`。
+
+```bash
+# 运行测试
+python -m pytest tests/orchestrator/ tests/api/ -v
+```
+
+## 📖 流水线如何运转
+
+1. **创建视频任务** —— 向 `/orchestrator` 提交标题 + 脚本，生成一个 `VideoTask`。
+2. **生成分镜** —— 分镜作为 `ShotTask` 入队，Worker 取出并提交给 Provider，下载完成片段。
+3. **审核** —— 在控制台审批视频和/或单个分镜；拒绝并重写提示词可重新生成任意分镜。
+4. **合成** —— 审核通过的片段拼接（可选 BGM）为最终导出。
+5. **发布** —— 成片上传 YouTube，并记录为一条 `PublishRecord`。
+
+## 🗺️ 状态
+
+公开持续开发中。**第一阶段（当前）：** 任务队列、素材管理、PixVerse Provider、双层审核、半自动 YouTube 发布。**路线图：** 更丰富的生成参数面板、多平台发布（抖音 / 快手 / B 站）、发布数据回流以驱动下一轮选题。Provider 与平台接口均有意做成可插拔。
+
+本项目在开源生成引擎 [Pixelle-Video](https://github.com/AIDC-AI/Pixelle-Video) 之上构建编排层与控制台，并受其启发。
+
+## 🤝 关于与联系
+
+由 **[@shengdabai](https://github.com/shengdabai)** 构建 —— 一位中文老师（6000+ 学员），在公开构建 AI + 中文教学工具。
+
+如果对你有用，欢迎 **⭐ Star 本仓库** 并 **关注 [@shengdabai](https://github.com/shengdabai)**。
+
+相关项目：
+- **[content-creator-hub](https://github.com/shengdabai/content-creator-hub)** —— 内容创作工具集
+- **[ai-video-generator](https://github.com/shengdabai/ai-video-generator)** —— AI 视频生成
+- **[chinese-teaching-video-system](https://github.com/shengdabai/chinese-teaching-video-system)** —— 中文教学视频系统
+
+## 许可证
+
+Apache-2.0 —— 见 [LICENSE](LICENSE)。
