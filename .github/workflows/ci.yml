@@ -42,16 +42,11 @@ jobs:
           python -m pip install uv==0.11.7
           uv sync --locked --extra dev --python 3.13
 
-      # The four deselected tests use the `httpx_mock` fixture from
-      # pytest-httpx, which is not declared in the `dev` extra yet. Drop the
-      # --deselect flags once pytest-httpx is added to pyproject.toml/uv.lock.
+      - name: Lint (ruff)
+        run: uv run --no-sync ruff check .
+
       - name: Run pytest
-        run: >-
-          uv run --no-sync python -m pytest -q
-          --deselect tests/orchestrator/test_asset_manager.py::test_download_and_register
-          --deselect tests/orchestrator/test_pixverse_provider.py::test_submit_returns_job_id
-          --deselect tests/orchestrator/test_pixverse_provider.py::test_poll_finished
-          --deselect tests/orchestrator/test_pixverse_provider.py::test_poll_processing
+        run: uv run --no-sync python -m pytest -q
 
   dashboard:
     name: Dashboard lint and build
@@ -91,6 +86,9 @@ jobs:
         uses: actions/checkout@v5
         with:
           persist-credentials: false
+          # Full history for the git-revision-date-localized plugin, which
+          # warns on a shallow clone (a warning fails --strict).
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -102,7 +100,7 @@ jobs:
       - name: Install docs dependencies
         run: python -m pip install -r requirements-docs.txt
 
-      # Same build the Deploy Documentation workflow runs before publishing,
-      # without --strict (strict mode currently fails on missing template images).
+      # Same site the Deploy Documentation workflow publishes; --strict turns
+      # broken links and plugin warnings into failures.
       - name: Build docs
-        run: mkdocs build --site-dir "$RUNNER_TEMP/site"
+        run: mkdocs build --strict --site-dir "$RUNNER_TEMP/site"

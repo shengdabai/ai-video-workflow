@@ -1,7 +1,7 @@
 import pytest
-from orchestrator.providers.pixverse import PixVerseProvider
-from orchestrator.providers.base import ProviderResult
+
 from orchestrator.models import ShotTask
+from orchestrator.providers.pixverse import PixVerseProvider
 
 
 @pytest.mark.asyncio

@@ -1,8 +1,10 @@
 from __future__ import annotations
-from typing import Optional
-from pydantic import BaseModel, Field
+
 import uuid
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, Field
 
 
 def _now() -> str:

@@ -32,30 +32,32 @@ _project_root = _script_dir.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-import argparse
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from loguru import logger
+# The imports below must run after the sys.path set-up above (E402).
+import argparse  # noqa: E402
+from contextlib import asynccontextmanager  # noqa: E402
 
-from api.config import api_config
-from api.tasks import task_manager
-from api.dependencies import shutdown_pixelle_video
+from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from loguru import logger  # noqa: E402
+
+from api.config import api_config  # noqa: E402
+from api.dependencies import shutdown_pixelle_video  # noqa: E402
 
 # Import routers
-from api.routers import (
-    health_router,
-    llm_router,
-    tts_router,
-    image_router,
+from api.routers import (  # noqa: E402
     content_router,
-    video_router,
-    tasks_router,
     files_router,
-    resources_router,
     frame_router,
+    health_router,
+    image_router,
+    llm_router,
+    resources_router,
+    tasks_router,
+    tts_router,
+    video_router,
 )
-from api.routers.orchestrator import router as orchestrator_router
+from api.routers.orchestrator import router as orchestrator_router  # noqa: E402
+from api.tasks import task_manager  # noqa: E402
 
 
 @asynccontextmanager

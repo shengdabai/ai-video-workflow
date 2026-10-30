@@ -1,7 +1,8 @@
 import pytest
+
 from orchestrator.db import init_db
+from orchestrator.models import ShotTask, VideoTask
 from orchestrator.queue.manager import QueueManager
-from orchestrator.models import VideoTask, ShotTask
 
 
 @pytest.fixture

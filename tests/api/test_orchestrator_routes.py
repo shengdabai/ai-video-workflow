@@ -1,6 +1,6 @@
+
 import pytest
-import os
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
 
 @pytest.fixture(autouse=True)

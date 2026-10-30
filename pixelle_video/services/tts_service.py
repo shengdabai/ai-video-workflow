@@ -14,17 +14,15 @@
 TTS (Text-to-Speech) Service - Supports both local and ComfyUI inference
 """
 
-import os
 import uuid
 from pathlib import Path
 from typing import Optional
 
-from comfykit import ComfyKit
 from loguru import logger
 
 from pixelle_video.services.comfy_base_service import ComfyBaseService
-from pixelle_video.utils.tts_util import edge_tts
 from pixelle_video.tts_voices import speed_to_rate
+from pixelle_video.utils.tts_util import edge_tts
 
 
 class TTSService(ComfyBaseService):
@@ -180,7 +178,7 @@ class TTSService(ComfyBaseService):
         
         # Call Edge TTS
         try:
-            audio_bytes = await edge_tts(
+            await edge_tts(
                 text=text,
                 voice=final_voice,
                 rate=rate,
@@ -284,7 +282,7 @@ class TTSService(ComfyBaseService):
             
             if not audio_path:
                 logger.error("No audio file generated")
-                logger.error(f"❌ Result analysis:")
+                logger.error("❌ Result analysis:")
                 logger.error(f"   - result.audios: {getattr(result, 'audios', 'NOT_FOUND')}")
                 logger.error(f"   - result.files: {getattr(result, 'files', 'NOT_FOUND')}")
                 logger.error(f"   - result.outputs: {getattr(result, 'outputs', 'NOT_FOUND')}")
@@ -293,8 +291,9 @@ class TTSService(ComfyBaseService):
             
             # If output_path provided and audio_path is URL, download to local
             if output_path and audio_path.startswith(('http://', 'https://')):
-                import httpx
                 import os
+
+                import httpx
                 
                 # Ensure parent directory exists
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)

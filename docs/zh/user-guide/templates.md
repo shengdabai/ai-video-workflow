@@ -198,7 +198,7 @@
 
     ---
 
-    ![video_default](../../images/1080x1920/video_default.jpg)
+    ![video_default](../../images/1080x1920/video_default.png)
     
     默认动态模版
 
@@ -206,7 +206,7 @@
 
     ---
 
-    ![video_healing](../../images/1080x1920/video_healing.jpg)
+    ![video_healing](../../images/1080x1920/video_healing.png)
     
     治愈动态模版
 </div>
