@@ -42,16 +42,8 @@ jobs:
           python -m pip install uv==0.11.7
           uv sync --locked --extra dev --python 3.13
 
-      # The four deselected tests use the `httpx_mock` fixture from
-      # pytest-httpx, which is not declared in the `dev` extra yet. Drop the
-      # --deselect flags once pytest-httpx is added to pyproject.toml/uv.lock.
       - name: Run pytest
-        run: >-
-          uv run --no-sync python -m pytest -q
-          --deselect tests/orchestrator/test_asset_manager.py::test_download_and_register
-          --deselect tests/orchestrator/test_pixverse_provider.py::test_submit_returns_job_id
-          --deselect tests/orchestrator/test_pixverse_provider.py::test_poll_finished
-          --deselect tests/orchestrator/test_pixverse_provider.py::test_poll_processing
+        run: uv run --no-sync python -m pytest -q
 
   dashboard:
     name: Dashboard lint and build
