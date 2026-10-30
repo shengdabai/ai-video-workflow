@@ -35,7 +35,6 @@ theme:
     code: Roboto Mono
   
   features:
-    - navigation.instant       # Instant loading
     - navigation.tracking      # Anchor tracking
     - navigation.tabs          # Top-level tabs
     - navigation.tabs.sticky   # Sticky tabs
