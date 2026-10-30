@@ -62,6 +62,21 @@ npm run lint
 | `npm run build` | next build |
 | `npm run lint` | eslint |
 
+### Python development setup
+
+The Python services need the `ffmpeg` binary on `PATH`, and so do the API route tests (they start the video service). The Dockerfile and CI install it with apt.
+
+```bash
+# Install ffmpeg first:
+#   macOS:          brew install ffmpeg
+#   Debian/Ubuntu:  sudo apt-get install -y ffmpeg
+uv sync --locked --extra dev   # Python dependencies + pytest, pytest-httpx, ruff
+uv run ruff check .            # lint (CI runs the same check)
+uv run pytest                  # tests
+```
+
+Docs: `pip install -r requirements-docs.txt` and then `mkdocs build --strict`.
+
 ## Operating Notes
 
 - Keep real credentials out of the repository. Use local environment files, GitHub repository secrets, or the deployment platform secret manager.
