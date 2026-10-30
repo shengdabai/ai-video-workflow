@@ -6,7 +6,7 @@ from typing import Any
 import httpx
 import streamlit as st
 from loguru import logger
-from moviepy.editor import VideoFileClip
+from PIL import Image
 
 from pixelle_video.config import config_manager
 from pixelle_video.utils.os_util import create_task_output_dir
@@ -15,6 +15,14 @@ from web.i18n import get_language, tr
 from web.pipelines.base import PipelineUI, register_pipeline_ui
 from web.utils.async_helpers import run_async
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
+
+# moviepy 1.0.3 calls Image.ANTIALIAS in its resize path (moviepy.video.fx.resize),
+# and Pillow 10 removed that alias. LANCZOS is the same filter, so restore the
+# alias before moviepy is imported instead of moving to the moviepy 2.x API.
+if not hasattr(Image, "ANTIALIAS"):
+    Image.ANTIALIAS = Image.LANCZOS
+
+from moviepy.editor import VideoFileClip  # noqa: E402
 
 
 class ActionTransferPipelineUI(PipelineUI):
