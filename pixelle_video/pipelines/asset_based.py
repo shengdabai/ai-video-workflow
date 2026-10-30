@@ -455,7 +455,7 @@ class AssetBasedPipeline(LinearVideoPipeline):
             dims = template_name.split("/")[0].split("x")
             media_width = int(dims[0])
             media_height = int(dims[1])
-        except:
+        except Exception:
             # Default to 1080x1920
             media_width = 1080
             media_height = 1920
@@ -672,7 +672,7 @@ class AssetBasedPipeline(LinearVideoPipeline):
             ))
             
             # Use FrameProcessor for proper composition
-            processed_frame = await self.core.frame_processor(
+            await self.core.frame_processor(
                 frame=frame,
                 storyboard=storyboard,
                 config=config,

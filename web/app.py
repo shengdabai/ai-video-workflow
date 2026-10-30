@@ -26,7 +26,8 @@ _project_root = _script_dir.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-import streamlit as st
+# The imports below must run after the sys.path set-up above (E402).
+import streamlit as st  # noqa: E402
 
 # Setup page config (must be first Streamlit command)
 st.set_page_config(

@@ -242,7 +242,7 @@ class VideoService:
             
             # Run command
             import subprocess
-            result = subprocess.run(
+            subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
@@ -418,7 +418,6 @@ class VideoService:
                 fps = fps_num / fps_den if fps_den != 0 else 30
                 
                 # Create black video for padding
-                black_video_path = self._get_unique_temp_path("black_pad", os.path.basename(output))
                 black_input = ffmpeg.input(
                     f'color=c=black:s={width}x{height}:r={fps}',
                     f='lavfi',

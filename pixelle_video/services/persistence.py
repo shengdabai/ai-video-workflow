@@ -322,25 +322,6 @@ class PersistenceService:
         """Check if task exists"""
         return self.get_task_dir(task_id).exists()
     
-    async def delete_task(self, task_id: str):
-        """
-        Delete task directory and all files
-        
-        Args:
-            task_id: Task ID
-        """
-        try:
-            task_dir = self.get_task_dir(task_id)
-            
-            if task_dir.exists():
-                import shutil
-                shutil.rmtree(task_dir)
-                logger.info(f"Deleted task: {task_id}")
-            
-        except Exception as e:
-            logger.error(f"Failed to delete task {task_id}: {e}")
-            raise
-    
     # ========================================================================
     # Serialization Helpers
     # ========================================================================

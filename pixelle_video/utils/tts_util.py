@@ -19,7 +19,6 @@ Currently, TTS service uses ComfyUI workflows only.
 
 import asyncio
 import random
-import ssl
 
 import edge_tts as edge_tts_sdk
 from aiohttp import ClientResponseError, WSServerHandshakeError
@@ -139,15 +138,10 @@ async def edge_tts(
                 await asyncio.sleep(retry_delay)
             
             try:
-                # Create communicate instance with certifi SSL context
-                if _USE_CERTIFI_SSL:
-                    if attempt == 0:  # Only log info once
-                        logger.debug("Using certifi SSL certificates for secure Edge TTS connection")
-                    # Create SSL context with certifi bundle
-                    import certifi
-                    ssl_context = ssl.create_default_context(cafile=certifi.where())
-                else:
-                    ssl_context = None
+                # edge-tts verifies TLS with its own certifi-based SSL context,
+                # so no context is passed to Communicate.
+                if _USE_CERTIFI_SSL and attempt == 0:  # Only log info once
+                    logger.debug("Using certifi SSL certificates for secure Edge TTS connection")
                 
                 # Create communicate instance
                 communicate = edge_tts_sdk.Communicate(

@@ -25,12 +25,13 @@ _project_root = _script_dir.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-import streamlit as st
+# The imports below must run after the sys.path set-up above (E402).
+import streamlit as st  # noqa: E402
 
-from web.components.header import render_header
-from web.i18n import tr
-from web.state.session import get_pixelle_video, init_i18n, init_session_state
-from web.utils.async_helpers import run_async
+from web.components.header import render_header  # noqa: E402
+from web.i18n import tr  # noqa: E402
+from web.state.session import get_pixelle_video, init_i18n, init_session_state  # noqa: E402
+from web.utils.async_helpers import run_async  # noqa: E402
 
 # Page config
 st.set_page_config(
@@ -71,7 +72,7 @@ def format_datetime(iso_string: str) -> str:
     try:
         dt = datetime.fromisoformat(iso_string)
         return dt.strftime("%m-%d %H:%M")
-    except:
+    except Exception:
         return iso_string
 
 

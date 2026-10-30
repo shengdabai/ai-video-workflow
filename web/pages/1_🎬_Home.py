@@ -23,16 +23,16 @@ _project_root = _script_dir.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-import streamlit as st
-
-from web.components.faq import render_faq_sidebar
+# The imports below must run after the sys.path set-up above (E402).
+import streamlit as st  # noqa: E402
 
 # Import components
-from web.components.header import render_header
-from web.components.settings import render_advanced_settings
+from web.components.faq import render_faq_sidebar  # noqa: E402
+from web.components.header import render_header  # noqa: E402
+from web.components.settings import render_advanced_settings  # noqa: E402
 
 # Import state management
-from web.state.session import get_pixelle_video, init_i18n, init_session_state
+from web.state.session import get_pixelle_video, init_i18n, init_session_state  # noqa: E402
 
 # Page config
 st.set_page_config(

@@ -301,9 +301,6 @@ class FrameProcessor:
         # Resolve template path (handles various input formats)
         template_path = resolve_template_path(config.frame_template)
         
-        # Get content metadata from storyboard
-        content_metadata = storyboard.content_metadata if storyboard else None
-        
         # Build ext data
         ext = {
             "index": frame.index + 1,

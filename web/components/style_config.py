@@ -14,6 +14,7 @@
 Style configuration components for web UI (middle column)
 """
 
+import base64
 import os
 from pathlib import Path
 

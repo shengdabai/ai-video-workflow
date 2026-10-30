@@ -178,7 +178,7 @@ class TTSService(ComfyBaseService):
         
         # Call Edge TTS
         try:
-            audio_bytes = await edge_tts(
+            await edge_tts(
                 text=text,
                 voice=final_voice,
                 rate=rate,

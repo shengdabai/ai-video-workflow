@@ -6,11 +6,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent.parent / ".env")
-from orchestrator.assets.manager import AssetManager
-from orchestrator.db import init_db
-from orchestrator.providers.base import VideoProvider
-from orchestrator.providers.pixverse import PixVerseProvider
-from orchestrator.queue.manager import QueueManager
+# Kept after load_dotenv() so these modules start with .env loaded (E402).
+from orchestrator.assets.manager import AssetManager  # noqa: E402
+from orchestrator.db import init_db  # noqa: E402
+from orchestrator.providers.base import VideoProvider  # noqa: E402
+from orchestrator.providers.pixverse import PixVerseProvider  # noqa: E402
+from orchestrator.queue.manager import QueueManager  # noqa: E402
 
 MAX_CONCURRENT = 3
 MAX_RETRY = 3
