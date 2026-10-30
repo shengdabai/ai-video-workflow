@@ -48,6 +48,42 @@ jobs:
       - name: Run pytest
         run: uv run --no-sync python -m pytest -q
 
+      # Boot the Streamlit web UI the way start_web.sh does and check that the
+      # server answers. Streamlit >= 1.66 serves the UI with Starlette/Uvicorn
+      # instead of Tornado. The page scripts themselves are rendered by
+      # tests/web/test_streamlit_app.py (AppTest), because the server only runs
+      # them when a browser session connects.
+      - name: Smoke test Streamlit web UI
+        shell: bash
+        env:
+          PORT: '8765'
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/streamlit.log"
+          uv run --no-sync streamlit run web/app.py \
+            --server.headless true --server.address 127.0.0.1 --server.port "$PORT" \
+            --browser.gatherUsageStats false > "$log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          health=""
+          for _ in $(seq 1 60); do
+            health="$(curl -sf "http://127.0.0.1:$PORT/_stcore/health" || true)"
+            [ "$health" = "ok" ] && break
+            sleep 1
+          done
+          if [ "$health" != "ok" ]; then
+            cat "$log"
+            echo "::error::Streamlit /_stcore/health did not return ok"
+            exit 1
+          fi
+          page="$(curl -sf "http://127.0.0.1:$PORT/")"
+          if ! grep -q '<div id="root"></div>' <<<"$page"; then
+            cat "$log"
+            echo "::error::Streamlit index page has no root div"
+            exit 1
+          fi
+          echo "Streamlit health=ok, index page served"
+
   dashboard:
     name: Dashboard lint and build
     runs-on: ubuntu-latest
