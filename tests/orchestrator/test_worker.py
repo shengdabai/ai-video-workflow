@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
+
 from orchestrator.db import init_db
+from orchestrator.models import ShotTask, VideoTask
 from orchestrator.queue.manager import QueueManager
-from orchestrator.models import VideoTask, ShotTask
 from orchestrator.worker import process_one_cycle
 
 

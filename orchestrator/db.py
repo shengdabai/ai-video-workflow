@@ -1,7 +1,9 @@
 from __future__ import annotations
-import aiosqlite
-from typing import AsyncGenerator
+
 from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
+import aiosqlite
 
 _DB_PATH: str = "orchestrator.db"
 

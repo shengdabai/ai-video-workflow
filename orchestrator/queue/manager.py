@@ -1,8 +1,10 @@
 from __future__ import annotations
-from typing import Optional
+
 from datetime import datetime
+from typing import Optional
+
 from orchestrator.db import get_db, set_db_path
-from orchestrator.models import VideoTask, ShotTask
+from orchestrator.models import ShotTask, VideoTask
 
 
 class QueueManager:

@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from typing import Optional
+
 from orchestrator.db import set_db_path
 from orchestrator.queue.manager import QueueManager
 

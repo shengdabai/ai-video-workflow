@@ -29,8 +29,9 @@ import os
 import re
 import tempfile
 import uuid
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, Optional
+
 from loguru import logger
 
 from pixelle_video.utils.template_util import parse_template_size

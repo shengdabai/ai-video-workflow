@@ -18,14 +18,13 @@ Currently, TTS service uses ComfyUI workflows only.
 """
 
 import asyncio
-import ssl
 import random
-import certifi
+import ssl
+
 import edge_tts as edge_tts_sdk
+from aiohttp import ClientResponseError, WSServerHandshakeError
 from edge_tts.exceptions import NoAudioReceived
 from loguru import logger
-from aiohttp import WSServerHandshakeError, ClientResponseError
-
 
 # Use certifi bundle for SSL verification instead of disabling it
 _USE_CERTIFI_SSL = True
@@ -190,7 +189,7 @@ async def edge_tts(
                 if error_code == 401 or '401' in error_msg:
                     logger.warning(f"⚠️  Edge TTS 401 Authentication Error (attempt {attempt + 1}/{retry_count + 1})")
                     logger.debug(f"Error details: {error_msg}")
-                    logger.debug(f"This is usually caused by rate limiting. Will retry with exponential backoff...")
+                    logger.debug("This is usually caused by rate limiting. Will retry with exponential backoff...")
                 else:
                     logger.warning(f"⚠️  Edge TTS error (attempt {attempt + 1}/{retry_count + 1}): {error_code} - {e}")
                 
@@ -204,7 +203,7 @@ async def edge_tts(
                 # NoAudioReceived is often a temporary issue - retry with longer delay
                 last_error = e
                 logger.warning(f"⚠️  Edge TTS NoAudioReceived (attempt {attempt + 1}/{retry_count + 1})")
-                logger.debug(f"This is usually a temporary Microsoft service issue. Will retry with longer delay...")
+                logger.debug("This is usually a temporary Microsoft service issue. Will retry with longer delay...")
                 
                 if attempt >= retry_count:
                     logger.error(f"❌ All {retry_count + 1} attempts failed due to NoAudioReceived")
@@ -327,7 +326,7 @@ async def list_voices(locale: str = None, retry_count: int = _RETRY_COUNT, retry
                 if error_code == 401 or '401' in error_msg:
                     logger.warning(f"⚠️  Edge TTS 401 Authentication Error (list_voices attempt {attempt + 1}/{retry_count + 1})")
                     logger.debug(f"Error details: {error_msg}")
-                    logger.debug(f"This is usually caused by rate limiting. Will retry with exponential backoff...")
+                    logger.debug("This is usually caused by rate limiting. Will retry with exponential backoff...")
                 else:
                     logger.warning(f"⚠️  List voices error (attempt {attempt + 1}/{retry_count + 1}): {error_code} - {e}")
                 

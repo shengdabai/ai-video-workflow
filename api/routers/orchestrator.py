@@ -1,13 +1,16 @@
 from __future__ import annotations
+
 import os
 from datetime import datetime
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
-from orchestrator.db import set_db_path, get_db
+
+from orchestrator.db import get_db
+from orchestrator.models import Asset, PublishRecord, ShotTask, VideoTask
 from orchestrator.queue.manager import QueueManager
 from orchestrator.review.manager import ReviewManager
-from orchestrator.models import VideoTask, ShotTask, Asset, PublishRecord
 
 router = APIRouter(prefix="/orchestrator", tags=["orchestrator"])
 
@@ -116,9 +119,9 @@ async def reject_shot(shot_id: str, req: RejectShotRequest):
 
 @router.post("/tasks/{task_id}/publish")
 async def publish_task(task_id: str, req: PublishRequest):
-    from orchestrator.publish.composer import compose_video
-    from orchestrator.publish.youtube import upload_to_youtube, VideoMeta
     from orchestrator.assets.manager import AssetManager
+    from orchestrator.publish.composer import compose_video
+    from orchestrator.publish.youtube import VideoMeta, upload_to_youtube
 
     queue = _queue()
     shots = await queue.get_shots_by_video(task_id)

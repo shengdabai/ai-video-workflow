@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import os
+
 import httpx
-from orchestrator.providers.base import VideoProvider, ProviderResult
+
 from orchestrator.models import ShotTask
+from orchestrator.providers.base import ProviderResult, VideoProvider
 
 _STATUS_MAP = {
     0: "processing",

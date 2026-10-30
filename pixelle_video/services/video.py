@@ -34,11 +34,7 @@ from typing import List, Literal, Optional
 import ffmpeg
 from loguru import logger
 
-from pixelle_video.utils.os_util import (
-    get_resource_path,
-    list_resource_files,
-    resource_exists
-)
+from pixelle_video.utils.os_util import get_resource_path, list_resource_files, resource_exists
 
 
 def check_ffmpeg() -> None:
@@ -444,7 +440,7 @@ class VideoService:
             audio_stream = audio_stream.filter('apad', whole_dur=target_duration)
         
         if not video_has_audio:
-            logger.info(f"Video has no audio stream, adding audio track")
+            logger.info("Video has no audio stream, adding audio track")
             # Video is silent, just add the audio
             try:
                 (
