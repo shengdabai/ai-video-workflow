@@ -42,6 +42,9 @@ jobs:
           python -m pip install uv==0.11.7
           uv sync --locked --extra dev --python 3.13
 
+      - name: Lint (ruff)
+        run: uv run --no-sync ruff check .
+
       - name: Run pytest
         run: uv run --no-sync python -m pytest -q
 
