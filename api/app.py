@@ -56,6 +56,7 @@ from api.routers import (  # noqa: E402
     tts_router,
     video_router,
 )
+from api.routers.orchestrator import init_orchestrator_db  # noqa: E402
 from api.routers.orchestrator import router as orchestrator_router  # noqa: E402
 from api.tasks import task_manager  # noqa: E402
 
@@ -69,6 +70,7 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     logger.info("🚀 Starting Pixelle-Video API...")
+    await init_orchestrator_db()
     await task_manager.start()
     logger.info("✅ Pixelle-Video API started successfully\n")
     

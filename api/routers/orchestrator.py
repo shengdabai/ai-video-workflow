@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from orchestrator.db import get_db
+from orchestrator.db import get_db, init_db
 from orchestrator.models import Asset, PublishRecord, ShotTask, VideoTask
 from orchestrator.queue.manager import QueueManager
 from orchestrator.review.manager import ReviewManager
@@ -15,6 +15,17 @@ from orchestrator.review.manager import ReviewManager
 router = APIRouter(prefix="/orchestrator", tags=["orchestrator"])
 
 _DB_PATH = os.environ.get("ORCHESTRATOR_DB_PATH", "orchestrator.db")
+
+
+async def init_orchestrator_db() -> None:
+    """Create the orchestrator tables if they do not exist yet.
+
+    Called from the API lifespan so that a fresh service (no database file)
+    answers the orchestrator routes instead of failing with
+    ``no such table``. ``init_db`` only runs ``CREATE TABLE IF NOT EXISTS``,
+    so calling it on every start-up is safe.
+    """
+    await init_db(_DB_PATH)
 
 
 def _queue() -> QueueManager:
