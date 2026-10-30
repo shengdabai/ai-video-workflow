@@ -198,7 +198,7 @@ Suitable for TikTok, Kuaishou, Xiaohongshu, and other short video platforms.
 
     ---
 
-    ![video_default](../../images/1080x1920/video_default.jpg)
+    ![video_default](../../images/1080x1920/video_default_en.png)
     
     Default dynamic template
 
@@ -206,7 +206,7 @@ Suitable for TikTok, Kuaishou, Xiaohongshu, and other short video platforms.
 
     ---
 
-    ![video_healing](../../images/1080x1920/video_healing.jpg)
+    ![video_healing](../../images/1080x1920/video_healing_en.png)
     
     Healing dynamic template
 
