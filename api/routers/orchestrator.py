@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from api.pathsafe import resolve_file_inside, split_relative_path
+from api.pathsafe import BGM_PATH_ERROR, resolve_bgm_file
 from orchestrator.db import get_db, init_db
 from orchestrator.models import Asset, PublishRecord, ShotTask, VideoTask
 from orchestrator.queue.manager import QueueManager
@@ -28,44 +27,6 @@ async def init_orchestrator_db() -> None:
     so calling it on every start-up is safe.
     """
     await init_db(_DB_PATH)
-
-
-# A publish request's bgm_path names an audio file in one of these
-# directories (relative to the working directory, like the files API).
-# "bgm/<name>", "data/bgm/<name>" and "output/<path>" name the directory;
-# a bare "<name>" is looked up in data/bgm/ first, then bgm/, the same order
-# the video pipeline uses.
-_BGM_ROOTS = ("data/bgm", "bgm", "output")
-_BGM_SEARCH_ROOTS = ("data/bgm", "bgm")
-_BGM_SUFFIXES = (".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac")
-_BGM_PATH_ERROR = "bgm_path must name an audio file in bgm/, data/bgm/ or output/"
-
-
-def _resolve_bgm_file(bgm_path: str) -> Optional[Path]:
-    """
-    Map a publish request's bgm_path to an audio file inside the BGM/output roots.
-
-    Uses the same rules as the files API: no NUL byte, no absolute path, no
-    ".." segment, and the resolved file (symlinks followed) must be a regular
-    file inside its root. Returns None for anything else.
-    """
-    parts = split_relative_path(bgm_path)
-    if parts is None:
-        return None
-    resolved = None
-    for root in _BGM_ROOTS:
-        root_parts = tuple(root.split("/"))
-        if len(parts) > len(root_parts) and parts[: len(root_parts)] == root_parts:
-            resolved = resolve_file_inside(root, *parts[len(root_parts):])
-            break
-    else:
-        for root in _BGM_SEARCH_ROOTS:
-            resolved = resolve_file_inside(root, *parts)
-            if resolved is not None:
-                break
-    if resolved is None or resolved.suffix.lower() not in _BGM_SUFFIXES:
-        return None
-    return resolved
 
 
 def _queue() -> QueueManager:
@@ -177,9 +138,9 @@ async def publish_task(task_id: str, req: PublishRequest):
     # Validate the request before any work; ffmpeg only gets the resolved path.
     bgm_file = None
     if req.bgm_path:
-        bgm_file = _resolve_bgm_file(req.bgm_path)
+        bgm_file = resolve_bgm_file(req.bgm_path)
         if bgm_file is None:
-            raise HTTPException(status_code=400, detail=_BGM_PATH_ERROR)
+            raise HTTPException(status_code=400, detail=BGM_PATH_ERROR)
 
     queue = _queue()
     shots = await queue.get_shots_by_video(task_id)

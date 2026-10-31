@@ -28,13 +28,35 @@ import os
 import shutil
 import tempfile
 import uuid
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import List, Literal, Optional
 
 import ffmpeg
 from loguru import logger
 
-from pixelle_video.utils.os_util import get_resource_path, list_resource_files, resource_exists
+from pixelle_video.utils.os_util import get_pixelle_video_root_path, list_resource_files
+
+# Directories (inside the project root) that a BGM path may point into.
+# "bgm/<name>", "data/bgm/<name>" and "output/<path>" name the directory; any
+# other relative path, such as a bare "<name>", is looked up in data/bgm/
+# first, then bgm/.
+_BGM_ROOTS = (("data", "bgm"), ("bgm",), ("output",))
+_BGM_SEARCH_ROOTS = (("data", "bgm"), ("bgm",))
+
+
+def _bgm_candidates(bgm_path: str, project_root: Path) -> List[Path]:
+    """Paths to try for a BGM path, in order; empty when the input is unusable."""
+    if not bgm_path or "\x00" in bgm_path:
+        return []
+    if Path(bgm_path).is_absolute():
+        return [Path(bgm_path)]
+    parts = PurePosixPath(bgm_path.replace("\\", "/")).parts
+    if not parts or ".." in parts:
+        return []
+    for root in _BGM_ROOTS:
+        if len(parts) > len(root) and parts[: len(root)] == root:
+            return [project_root.joinpath(*parts)]
+    return [project_root.joinpath(*root, *parts) for root in _BGM_SEARCH_ROOTS]
 
 
 def check_ffmpeg() -> None:
@@ -823,46 +845,50 @@ class VideoService:
     def _resolve_bgm_path(self, bgm_path: str) -> str:
         """
         Resolve BGM path (filename or custom path) with custom override support
-        
-        Search priority:
-            1. Direct path (absolute or relative)
-            2. data/bgm/{filename} (custom)
-            3. bgm/{filename} (default)
-        
+
+        Search rules (directories are inside the project root):
+            1. Absolute path: used as given
+            2. "bgm/...", "data/bgm/...", "output/...": looked up in that directory
+            3. Any other relative path, e.g. a filename: data/bgm/ (custom) first,
+               then bgm/ (default)
+
+        In every case the result (symlinks followed) must be a regular file
+        inside data/bgm/, bgm/ or output/; anything else is not found.
+
         Args:
             bgm_path: Can be:
                 - Filename with extension (e.g., "default.mp3", "happy.mp3"): auto-resolved from bgm/ or data/bgm/
-                - Custom file path (absolute or relative)
-        
+                - Path to a file in bgm/, data/bgm/ or output/ (absolute or relative)
+
         Returns:
             Resolved absolute path
-        
+
         Raises:
             FileNotFoundError: If BGM file not found
         """
-        # Try direct path first (absolute or relative)
-        if os.path.exists(bgm_path):
-            return os.path.abspath(bgm_path)
-        
-        # Try as filename in resource directories (custom > default)
-        if resource_exists("bgm", bgm_path):
-            return get_resource_path("bgm", bgm_path)
-        
-        # Not found - provide helpful error message
-        tried_paths = [
-            os.path.abspath(bgm_path),
-            f"data/bgm/{bgm_path} or bgm/{bgm_path}"
-        ]
-        
+        project_root = Path(get_pixelle_video_root_path())
+        try:
+            allowed_roots = [project_root.joinpath(*root).resolve() for root in _BGM_ROOTS]
+        except (OSError, RuntimeError, ValueError):
+            allowed_roots = []
+
+        for candidate in _bgm_candidates(bgm_path, project_root):
+            try:
+                resolved = candidate.resolve()
+            except (OSError, RuntimeError, ValueError):
+                continue
+            if resolved.is_file() and any(
+                resolved != root and resolved.is_relative_to(root) for root in allowed_roots
+            ):
+                return str(resolved)
+
         # List available BGM files
         available_bgm = self._list_available_bgm()
         available_msg = f"\n  Available BGM files: {', '.join(available_bgm)}" if available_bgm else ""
-        
+
         raise FileNotFoundError(
             f"BGM file not found: '{bgm_path}'\n"
-            f"  Tried paths:\n"
-            f"    1. {tried_paths[0]}\n"
-            f"    2. {tried_paths[1]}"
+            f"  bgm_path must name a file in data/bgm/, bgm/ or output/"
             f"{available_msg}"
         )
     

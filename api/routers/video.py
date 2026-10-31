@@ -17,12 +17,13 @@ Supports both synchronous and asynchronous video generation.
 """
 
 import os
-from typing import Optional
+from typing import NamedTuple, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
 
 from api.dependencies import PixelleVideoDep
+from api.pathsafe import BGM_PATH_ERROR, resolve_bgm_file
 from api.schemas.video import (
     VideoGenerateAsyncResponse,
     VideoGenerateRequest,
@@ -34,17 +35,34 @@ from api.templates_lookup import TemplateFile, template_file_or_404
 router = APIRouter(prefix="/video", tags=["Video Generation"])
 
 
-def _checked_inputs(request_body: VideoGenerateRequest) -> Optional[TemplateFile]:
+class _CheckedInputs(NamedTuple):
+    template: Optional[TemplateFile]
+    """None when the request has no frame_template (reported later)."""
+    bgm_path: Optional[str]
+    """Resolved BGM file, or None for no BGM."""
+
+
+def _checked_inputs(request_body: VideoGenerateRequest) -> _CheckedInputs:
     """
     Check the file inputs of a video request before any work starts.
 
-    frame_template must name a template inside templates/ or data/templates/
-    (404 otherwise). Returns the template, or None when the request has no
-    frame_template (the generation code reports that case itself).
+    - frame_template must name a template inside templates/ or
+      data/templates/ (404 otherwise).
+    - bgm_path must name an audio file inside bgm/, data/bgm/ or output/
+      (400 otherwise); the pipeline gets the resolved path.
     """
-    if not request_body.frame_template:
-        return None
-    return template_file_or_404(request_body.frame_template)
+    template = None
+    if request_body.frame_template:
+        template = template_file_or_404(request_body.frame_template)
+
+    bgm_path = None
+    if request_body.bgm_path:
+        bgm_file = resolve_bgm_file(request_body.bgm_path)
+        if bgm_file is None:
+            raise HTTPException(status_code=400, detail=BGM_PATH_ERROR)
+        bgm_path = str(bgm_file)
+
+    return _CheckedInputs(template=template, bgm_path=bgm_path)
 
 
 def path_to_url(request: Request, file_path: str) -> str:
@@ -121,17 +139,17 @@ async def generate_video_sync(
     Returns path to generated video, duration, and file size.
     """
     # Check the request's file inputs before any work starts.
-    template_file = _checked_inputs(request_body)
+    inputs = _checked_inputs(request_body)
 
     try:
         logger.info(f"Sync video generation: {request_body.text[:50]}...")
 
         # Auto-determine media_width and media_height from template meta tags (required)
-        if template_file is None:
+        if inputs.template is None:
             raise ValueError("frame_template is required to determine media size")
 
         from pixelle_video.services.frame_html import HTMLFrameGenerator
-        generator = HTMLFrameGenerator(template_file.path)
+        generator = HTMLFrameGenerator(inputs.template.path)
         media_width, media_height = generator.get_media_size()
         logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
         
@@ -149,9 +167,9 @@ async def generate_video_sync(
             "media_height": media_height,
             "media_workflow": request_body.media_workflow,
             "video_fps": request_body.video_fps,
-            "frame_template": template_file.key,
+            "frame_template": inputs.template.key,
             "prompt_prefix": request_body.prompt_prefix,
-            "bgm_path": request_body.bgm_path,
+            "bgm_path": inputs.bgm_path,
             "bgm_volume": request_body.bgm_volume,
         }
         
@@ -216,7 +234,7 @@ async def generate_video_async(
     Returns task_id for tracking progress.
     """
     # Check the request's file inputs before a task is created.
-    template_file = _checked_inputs(request_body)
+    inputs = _checked_inputs(request_body)
 
     try:
         logger.info(f"Async video generation: {request_body.text[:50]}...")
@@ -231,11 +249,11 @@ async def generate_video_async(
         async def execute_video_generation():
             """Execute video generation in background"""
             # Auto-determine media_width and media_height from template meta tags (required)
-            if template_file is None:
+            if inputs.template is None:
                 raise ValueError("frame_template is required to determine media size")
 
             from pixelle_video.services.frame_html import HTMLFrameGenerator
-            generator = HTMLFrameGenerator(template_file.path)
+            generator = HTMLFrameGenerator(inputs.template.path)
             media_width, media_height = generator.get_media_size()
             logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
             
@@ -253,9 +271,9 @@ async def generate_video_async(
                 "media_height": media_height,
                 "media_workflow": request_body.media_workflow,
                 "video_fps": request_body.video_fps,
-                "frame_template": template_file.key,
+                "frame_template": inputs.template.key,
                 "prompt_prefix": request_body.prompt_prefix,
-                "bgm_path": request_body.bgm_path,
+                "bgm_path": inputs.bgm_path,
                 "bgm_volume": request_body.bgm_volume,
                 # Progress callback can be added here if needed
                 # "progress_callback": lambda event: task_manager.update_progress(...)
