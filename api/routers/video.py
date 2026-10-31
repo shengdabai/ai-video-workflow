@@ -23,7 +23,13 @@ from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
 
 from api.dependencies import PixelleVideoDep
-from api.pathsafe import BGM_PATH_ERROR, resolve_bgm_file
+from api.pathsafe import (
+    AUDIO_INPUT_SUFFIXES,
+    BGM_PATH_ERROR,
+    REF_AUDIO_ERROR,
+    resolve_bgm_file,
+    resolve_media_input,
+)
 from api.schemas.video import (
     VideoGenerateAsyncResponse,
     VideoGenerateRequest,
@@ -40,6 +46,8 @@ class _CheckedInputs(NamedTuple):
     """None when the request has no frame_template (reported later)."""
     bgm_path: Optional[str]
     """Resolved BGM file, or None for no BGM."""
+    ref_audio: Optional[str]
+    """http(s) URL or resolved audio file, or None."""
 
 
 def _checked_inputs(request_body: VideoGenerateRequest) -> _CheckedInputs:
@@ -50,6 +58,9 @@ def _checked_inputs(request_body: VideoGenerateRequest) -> _CheckedInputs:
       data/templates/ (404 otherwise).
     - bgm_path must name an audio file inside bgm/, data/bgm/ or output/
       (400 otherwise); the pipeline gets the resolved path.
+    - ref_audio must be an http(s) URL or an audio file inside output/,
+      data/ or resources/ (400 otherwise), because a ComfyUI TTS workflow
+      uploads the file to the ComfyUI server.
     """
     template = None
     if request_body.frame_template:
@@ -62,7 +73,13 @@ def _checked_inputs(request_body: VideoGenerateRequest) -> _CheckedInputs:
             raise HTTPException(status_code=400, detail=BGM_PATH_ERROR)
         bgm_path = str(bgm_file)
 
-    return _CheckedInputs(template=template, bgm_path=bgm_path)
+    ref_audio = None
+    if request_body.ref_audio:
+        ref_audio = resolve_media_input(request_body.ref_audio, AUDIO_INPUT_SUFFIXES)
+        if ref_audio is None:
+            raise HTTPException(status_code=400, detail=REF_AUDIO_ERROR)
+
+    return _CheckedInputs(template=template, bgm_path=bgm_path, ref_audio=ref_audio)
 
 
 def path_to_url(request: Request, file_path: str) -> str:
@@ -178,8 +195,8 @@ async def generate_video_sync(
             video_params["tts_workflow"] = request_body.tts_workflow
         
         # Add ref_audio if specified
-        if request_body.ref_audio:
-            video_params["ref_audio"] = request_body.ref_audio
+        if inputs.ref_audio:
+            video_params["ref_audio"] = inputs.ref_audio
         
         # Legacy voice_id support (deprecated)
         if request_body.voice_id:
@@ -284,8 +301,8 @@ async def generate_video_async(
                 video_params["tts_workflow"] = request_body.tts_workflow
             
             # Add ref_audio if specified
-            if request_body.ref_audio:
-                video_params["ref_audio"] = request_body.ref_audio
+            if inputs.ref_audio:
+                video_params["ref_audio"] = inputs.ref_audio
             
             # Legacy voice_id support (deprecated)
             if request_body.voice_id:

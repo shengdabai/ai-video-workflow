@@ -18,6 +18,7 @@ from fastapi import APIRouter, HTTPException
 from loguru import logger
 
 from api.dependencies import PixelleVideoDep
+from api.pathsafe import AUDIO_INPUT_SUFFIXES, REF_AUDIO_ERROR, resolve_media_input
 from api.schemas.tts import TTSSynthesizeRequest, TTSSynthesizeResponse
 from pixelle_video.utils.tts_util import get_audio_duration
 
@@ -54,10 +55,19 @@ async def tts_synthesize(
     {
         "text": "Hello, this is a cloned voice",
         "workflow": "runninghub/tts_index2.json",
-        "ref_audio": "path/to/reference.wav"
+        "ref_audio": "output/reference.wav"
     }
     ```
     """
+    # A ComfyUI TTS workflow uploads a local ref_audio file to the ComfyUI
+    # server, so only audio files in output/, data/ or resources/ (or an
+    # http(s) URL) are accepted.
+    ref_audio = None
+    if request.ref_audio:
+        ref_audio = resolve_media_input(request.ref_audio, AUDIO_INPUT_SUFFIXES)
+        if ref_audio is None:
+            raise HTTPException(status_code=400, detail=REF_AUDIO_ERROR)
+
     try:
         logger.info(f"TTS synthesis request: {request.text[:50]}...")
         
@@ -68,9 +78,9 @@ async def tts_synthesize(
         if request.workflow:
             tts_params["workflow"] = request.workflow
         
-        # Add ref_audio if specified
-        if request.ref_audio:
-            tts_params["ref_audio"] = request.ref_audio
+        # Add ref_audio if specified (checked above)
+        if ref_audio:
+            tts_params["ref_audio"] = ref_audio
         
         # Legacy voice_id support (deprecated)
         if request.voice_id and not request.workflow:

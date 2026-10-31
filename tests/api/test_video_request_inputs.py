@@ -278,3 +278,37 @@ async def test_generate_without_bgm(client, core, bgm_path):
     resp = await _generate(client, "sync", bgm_path=bgm_path)
     assert resp.status_code == 200, resp.text
     assert core.calls[0]["bgm_path"] is None
+
+
+REF_AUDIO_ERROR = {
+    "detail": "ref_audio must be an http(s) URL or an audio file in output/, data/ or resources/"
+}
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+@pytest.mark.parametrize(
+    "ref_audio",
+    ["../outer.mp3", "/etc/hosts", "file:///etc/hosts", "config.yaml", "output/notes.txt", "bgm/default.mp3"],
+)
+async def test_generate_rejects_ref_audio_outside_media_roots(client, core, mode, ref_audio):
+    tasks_before = _task_count()
+    resp = await _generate(client, mode, ref_audio=ref_audio)
+    assert resp.status_code == 400
+    assert resp.json() == REF_AUDIO_ERROR
+    assert core.calls == []
+    assert _task_count() == tasks_before
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+async def test_generate_passes_checked_ref_audio(client, core, app_dir, mode):
+    resp = await _generate(client, mode, ref_audio="output/audio/voice.wav")
+    if mode == "async":
+        await _finish_async(resp)
+    else:
+        assert resp.status_code == 200, resp.text
+    assert core.calls[0]["ref_audio"] == str((app_dir / "output" / "audio" / "voice.wav").resolve())
+
+    core.calls.clear()
+    resp = await _generate(client, "sync", ref_audio="https://example.com/voice.wav")
+    assert resp.status_code == 200
+    assert core.calls[0]["ref_audio"] == "https://example.com/voice.wav"

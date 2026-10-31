@@ -44,7 +44,8 @@ class VideoGenerateRequest(BaseModel):
     )
     ref_audio: Optional[str] = Field(
         None, 
-        description="Reference audio path for voice cloning (optional)"
+        description="Reference audio for voice cloning (optional): an http(s) URL, or a path to an "
+                    "audio file in output/, data/ or resources/"
     )
     voice_id: Optional[str] = Field(
         None, 
@@ -81,7 +82,11 @@ class VideoGenerateRequest(BaseModel):
     prompt_prefix: Optional[str] = Field(None, description="Image style prefix")
     
     # === BGM ===
-    bgm_path: Optional[str] = Field(None, description="Background music path")
+    bgm_path: Optional[str] = Field(
+        None,
+        description="Background music: a file name in data/bgm/ or bgm/ (e.g. 'default.mp3'), "
+                    "or a path to an audio file in bgm/, data/bgm/ or output/",
+    )
     bgm_volume: float = Field(0.3, ge=0.0, le=1.0, description="BGM volume (0.0-1.0)")
     
     class Config:

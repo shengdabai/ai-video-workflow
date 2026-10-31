@@ -14,16 +14,42 @@
 Frame/Template rendering endpoints
 """
 
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 
 from api.dependencies import PixelleVideoDep
+from api.pathsafe import IMAGE_INPUT_SUFFIXES, resolve_media_input
 from api.schemas.frame import FrameRenderRequest, FrameRenderResponse, TemplateParamsResponse
 from api.templates_lookup import TEMPLATE_NOT_FOUND, template_file_or_404
 from pixelle_video.services.frame_html import HTMLFrameGenerator
 from pixelle_video.utils.template_util import parse_template_size
 
 router = APIRouter(prefix="/frame", tags=["Frame Rendering"])
+
+_IMAGE_ERROR = (
+    "image must be an http(s) URL, a data:image/ URI, or an image or video file "
+    "in output/, data/ or resources/"
+)
+
+
+def _image_or_400(image: Optional[str]) -> Optional[str]:
+    """
+    Check the image field of a render request.
+
+    http(s) URLs and data:image/ URIs are passed on unchanged; a local path
+    must name an image or video file inside output/, data/ or resources/ and
+    is passed on resolved. Anything else answers 400.
+    """
+    if not image:
+        return image
+    if image.startswith("data:image/"):
+        return image
+    checked = resolve_media_input(image, IMAGE_INPUT_SUFFIXES)
+    if checked is None:
+        raise HTTPException(status_code=400, detail=_IMAGE_ERROR)
+    return checked
 
 
 @router.post("/render", response_model=FrameRenderResponse)
@@ -40,7 +66,8 @@ async def render_frame(
     - **template**: Template key (e.g., '1080x1920/default.html')
     - **title**: Optional title text
     - **text**: Frame text content
-    - **image**: Image path (can be local path or URL)
+    - **image**: Image URL (http/https or data:image/), or a path to an image
+      or video file in output/, data/ or resources/
     
     Returns path to generated frame image.
     
@@ -56,6 +83,7 @@ async def render_frame(
     """
     # Resolve the template inside templates/ or data/templates/ (404 otherwise)
     template_path = template_file_or_404(request.template).path
+    image = _image_or_400(request.image)
 
     try:
         logger.info(f"Frame render request: template={request.template}")
@@ -70,7 +98,7 @@ async def render_frame(
         frame_path = await generator.generate_frame(
             title=request.title,
             text=request.text,
-            image=request.image
+            image=image
         )
         
         return FrameRenderResponse(

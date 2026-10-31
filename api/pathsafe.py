@@ -113,6 +113,50 @@ def resolve_bgm_file(bgm_path: Optional[str]) -> Optional[Path]:
     return resolved
 
 
+# Request fields that hold a media URL or a local media file (the frame
+# image, the voice-cloning ref_audio) may name local files in these
+# directories (relative to the working directory, like the files API).
+MEDIA_INPUT_ROOTS = ("output", "data", "resources")
+IMAGE_INPUT_SUFFIXES = (
+    ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp",
+    ".mp4", ".webm", ".mov",  # video media for video templates
+)
+AUDIO_INPUT_SUFFIXES = BGM_SUFFIXES
+REF_AUDIO_ERROR = "ref_audio must be an http(s) URL or an audio file in output/, data/ or resources/"
+
+
+def resolve_media_input(value: Optional[str], suffixes: tuple[str, ...]) -> Optional[str]:
+    """
+    Check a request field that holds a media URL or a local media file.
+
+    An http:// or https:// URL is returned unchanged. Anything else is a
+    local path: a relative path must start with one of MEDIA_INPUT_ROOTS
+    ("output/...", "data/...", "resources/...") and is checked with the same
+    rules as the files API; an absolute path must point inside one of these
+    roots. The resolved file (symlinks followed) must be a regular file with
+    one of ``suffixes``; its resolved path is returned. Returns None for
+    anything else, including other URL schemes such as ``file:``.
+    """
+    if not value or "\x00" in value:
+        return None
+    if value.startswith(("http://", "https://")):
+        return value
+
+    resolved = None
+    if Path(value).is_absolute():
+        for root in MEDIA_INPUT_ROOTS:
+            resolved = file_inside(value, root)
+            if resolved is not None:
+                break
+    else:
+        parts = split_relative_path(value)
+        if parts is not None and len(parts) > 1 and parts[0] in MEDIA_INPUT_ROOTS:
+            resolved = resolve_file_inside(parts[0], *parts[1:])
+    if resolved is None or resolved.suffix.lower() not in suffixes:
+        return None
+    return str(resolved)
+
+
 def _regular_file_inside(resolved: Path, root_resolved: Path) -> Optional[Path]:
     if resolved == root_resolved or not resolved.is_relative_to(root_resolved):
         return None
