@@ -39,9 +39,11 @@ ENV PATH="/root/.local/bin:$PATH"
 RUN uv --version
 
 # Copy dependency files and source code for building
-# Note: pixelle_video is needed for hatchling to build the package
+# Note: pixelle_video and orchestrator are the wheel packages listed in
+# pyproject.toml; api/app.py imports orchestrator at start-up.
 COPY pyproject.toml uv.lock README.md ./
 COPY pixelle_video ./pixelle_video
+COPY orchestrator ./orchestrator
 
 # Create virtual environment and install dependencies
 # Use -i flag to specify mirror when USE_CN_MIRROR=true
@@ -52,7 +54,7 @@ RUN export UV_HTTP_TIMEOUT=300 && \
     else \
         uv pip install -e .; \
     fi && \
-    playwright install --with-deps chromium
+    .venv/bin/playwright install --with-deps chromium
 
 # Copy rest of application code
 COPY api ./api

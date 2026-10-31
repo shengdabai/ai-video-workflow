@@ -16,13 +16,66 @@ File service endpoints
 Provides access to generated files (videos, images, audio) and resource files.
 """
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from loguru import logger
 
 router = APIRouter(prefix="/files", tags=["Files"])
+
+# Directories (relative to the working directory) that this endpoint serves.
+# A request path that starts with one of them is looked up in that directory;
+# any other request path is looked up in output/ (backward compatibility).
+_SERVED_ROOTS = (
+    "output",
+    "workflows",
+    "templates",
+    "bgm",
+    "data/bgm",
+    "data/templates",
+    "resources",
+)
+_DEFAULT_ROOT = "output"
+
+
+def _resolve_served_file(file_path: str) -> Optional[Path]:
+    """
+    Map a request path to a regular file inside one of the served roots.
+
+    The ASGI server has already percent-decoded the path once; it is not
+    decoded again. Returns None when the path is empty, contains a NUL byte,
+    is absolute, contains a ".." segment, or resolves (after following
+    symlinks) to anything that is not a regular file inside its root.
+    """
+    if not file_path or "\x00" in file_path:
+        return None
+    if PurePosixPath(file_path).is_absolute() or PureWindowsPath(file_path).is_absolute():
+        return None
+    parts = PurePosixPath(file_path.replace("\\", "/")).parts
+    if not parts or ".." in parts:
+        return None
+
+    root_rel = _DEFAULT_ROOT
+    rel_parts = parts
+    for candidate in _SERVED_ROOTS:
+        candidate_parts = tuple(candidate.split("/"))
+        if len(parts) > len(candidate_parts) and parts[: len(candidate_parts)] == candidate_parts:
+            root_rel = candidate
+            rel_parts = parts[len(candidate_parts):]
+            break
+
+    try:
+        root = (Path.cwd() / root_rel).resolve()
+        resolved = Path(root, *rel_parts).resolve()
+    except (OSError, RuntimeError, ValueError):
+        return None
+    if resolved == root or not resolved.is_relative_to(root):
+        return None
+    if not resolved.is_file():
+        return None
+    return resolved
 
 
 @router.get("/{file_path:path}")
@@ -51,52 +104,12 @@ async def get_file(file_path: str):
     Returns file for download or preview.
     """
     try:
-        # Define allowed directories (in priority order)
-        allowed_prefixes = [
-            "output/",
-            "workflows/",
-            "templates/",
-            "bgm/",
-            "data/bgm/",
-            "data/templates/",
-            "resources/",
-        ]
-        
-        # Check if path starts with allowed prefix, otherwise try output/
-        full_path = None
-        for prefix in allowed_prefixes:
-            if file_path.startswith(prefix):
-                full_path = file_path
-                break
-        
-        # If no prefix matched, assume it's in output/ (backward compatibility)
-        if full_path is None:
-            full_path = f"output/{file_path}"
-        
-        abs_path = Path.cwd() / full_path
-        
-        if not abs_path.exists():
-            raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
-        
-        if not abs_path.is_file():
-            raise HTTPException(status_code=400, detail=f"Path is not a file: {file_path}")
-        
-        # Security: only allow access to specified directories
-        try:
-            rel_path = abs_path.relative_to(Path.cwd())
-            rel_path_str = str(rel_path)
-            
-            # Check if path starts with any allowed prefix
-            is_allowed = any(rel_path_str.startswith(prefix.rstrip('/')) for prefix in allowed_prefixes)
-            
-            if not is_allowed:
-                raise HTTPException(
-                    status_code=403, 
-                    detail=f"Access denied: only {', '.join(p.rstrip('/') for p in allowed_prefixes)} directories are accessible"
-                )
-        except ValueError:
-            raise HTTPException(status_code=403, detail="Access denied")
-        
+        abs_path = _resolve_served_file(file_path)
+        if abs_path is None:
+            # Same answer for missing files and for paths outside the served
+            # roots, so the response does not reveal what exists elsewhere.
+            raise HTTPException(status_code=404, detail="File not found")
+
         # Determine media type
         suffix = abs_path.suffix.lower()
         media_types = {

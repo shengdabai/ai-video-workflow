@@ -113,6 +113,24 @@ jobs:
       - name: Build
         run: npm run build
 
+  docker-image:
+    name: Docker image build and API import
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Build image
+        run: docker build --tag ai-video-workflow:ci .
+
+      # A package that api/app.py imports but the Dockerfile does not COPY
+      # builds fine and only fails when the API container starts (#44).
+      - name: Import the API app inside the image
+        run: docker run --rm ai-video-workflow:ci .venv/bin/python -c "import api.app"
+
   docs-build:
     name: Docs build (mkdocs, no deploy)
     runs-on: ubuntu-latest
