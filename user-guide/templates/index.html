@@ -2048,17 +2048,55 @@
 <li>Use the new template name in configuration or Web interface</li>
 </ol>
 <h3 id="template-variables">Template Variables<a class="headerlink" href="#template-variables" title="Permanent link">&para;</a></h3>
-<p>Templates support the following Jinja2 variables:</p>
+<p>Templates use <code>{{name}}</code> placeholders (not Jinja2). Write them without spaces
+inside the braces: <code>{{title}}</code> is filled, <code>{{ title }}</code> is left as it is.</p>
 <ul>
-<li><code>{{ title }}</code> - Video title (optional)</li>
-<li><code>{{ text }}</code> - Current scene text content</li>
-<li><code>{{ image }}</code> - Current scene image (if any)</li>
+<li><code>{{title}}</code> - Video title (optional)</li>
+<li><code>{{text}}</code> - Current scene text content</li>
+<li><code>{{image}}</code> - Current scene image (if any)</li>
 </ul>
-<p>Values are inserted as plain text. In <code>title</code>, <code>text</code> and <code>template_params</code> values,
+<p>A template can declare its own parameters, which the Web interface shows as inputs
+and the API accepts in <code>template_params</code>:</p>
+<ul>
+<li><code>{{name}}</code> / <code>{{name=default}}</code> - text</li>
+<li><code>{{name:number=72}}</code> - number</li>
+<li><code>{{name:color=#764ba2}}</code> - color</li>
+<li><code>{{name:bool=false}}</code> - true/false</li>
+</ul>
+<p>Values are inserted as plain text. In <code>title</code>, <code>text</code> and text-parameter values,
 <code>&amp;</code>, <code>&lt;</code>, <code>&gt;</code>, <code>"</code> and <code>'</code> are HTML-escaped, so markup in them shows as text.
 In <code>image</code> (a URL), quotes, <code>&lt;</code>, <code>&gt;</code>, <code>\</code>, <code>`</code>, parentheses and whitespace are
 percent-encoded. Defaults written in the template itself are inserted unchanged.
 To show line breaks in <code>text</code>, use <code>white-space: pre-wrap</code> in the template CSS.</p>
+<p>Typed parameters are checked against their type. A value that does not match is
+replaced by the placeholder's default (or an empty string when it has none):</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Accepted values</th>
+<th>Inserted as</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>number</code></td>
+<td>a number, or digits with an optional sign and decimal part (<code>64</code>, <code>-1.5</code>)</td>
+<td>the number, without a unit: write the unit in the template (<code>{{size:number=72}}px</code>)</td>
+</tr>
+<tr>
+<td><code>color</code></td>
+<td><code>#rgb</code>, <code>#rgba</code>, <code>#rrggbb</code>, <code>#rrggbbaa</code>, <code>rgb()</code>/<code>rgba()</code>/<code>hsl()</code>/<code>hsla()</code> with numbers only, or a CSS color name (<code>red</code>)</td>
+<td>the color as given</td>
+</tr>
+<tr>
+<td><code>bool</code></td>
+<td><code>true</code>/<code>false</code>, <code>1</code>/<code>0</code>, <code>yes</code>/<code>no</code>, <code>on</code>/<code>off</code></td>
+<td><code>true</code> or <code>false</code></td>
+</tr>
+</tbody>
+</table>
+<p>A type declared on one placeholder applies to every placeholder with the same name.</p>
 <h3 id="example-template">Example Template<a class="headerlink" href="#example-template" title="Permanent link">&para;</a></h3>
 <div class="language-html highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="cp">&lt;!DOCTYPE html&gt;</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="p">&lt;</span><span class="nt">html</span><span class="p">&gt;</span>
@@ -2087,7 +2125,7 @@ To show line breaks in <code>text</code>, use <code>white-space: pre-wrap</code>
 </span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="p">&lt;/</span><span class="nt">head</span><span class="p">&gt;</span>
 </span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="p">&lt;</span><span class="nt">body</span><span class="p">&gt;</span>
 </span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>    <span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">"content"</span><span class="p">&gt;</span>
-</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>        <span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">"text"</span><span class="p">&gt;</span>{{ text }}<span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>        <span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">"text"</span><span class="p">&gt;</span>{{text}}<span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
 </span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>    <span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
 </span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="p">&lt;/</span><span class="nt">body</span><span class="p">&gt;</span>
 </span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="p">&lt;/</span><span class="nt">html</span><span class="p">&gt;</span>
@@ -2144,7 +2182,7 @@ To show line breaks in <code>text</code>, use <code>white-space: pre-wrap</code>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-datetime" title="October 31, 2026 01:54:31 UTC">October 31, 2026 01:54:31</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-datetime" title="October 31, 2026 02:23:54 UTC">October 31, 2026 02:23:54</span>
   </span>
 
     
