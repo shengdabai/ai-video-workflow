@@ -112,7 +112,7 @@ class DigitalHumanPipelineUI(PipelineUI):
                             # Check if image
                             ext = Path(path).suffix.lower()
                             if ext in [".jpg", ".jpeg", ".png", ".webp"]:
-                                st.image(file, caption=file.name, use_container_width=True)
+                                st.image(file, caption=file.name, width="stretch")
             else:
                 st.info(tr("digital_human.assets.character_empty_hint"))
 
@@ -240,7 +240,7 @@ class DigitalHumanPipelineUI(PipelineUI):
                                 # Check if image
                                 ext = Path(path).suffix.lower()
                                 if ext in [".jpg", ".jpeg", ".png", ".webp"]:
-                                    st.image(file, caption=file.name, use_container_width=True)
+                                    st.image(file, caption=file.name, width="stretch")
                 else:
                     st.info(tr("digital_human.assets.goods_empty_hint"))
                     # Text input
@@ -312,7 +312,7 @@ class DigitalHumanPipelineUI(PipelineUI):
                 st.button(
                     tr("btn.generate"),
                     type="primary",
-                    use_container_width=True,
+                    width="stretch",
                     disabled=True,
                     key="digital_human_generate_disabled"
                 )
@@ -323,7 +323,7 @@ class DigitalHumanPipelineUI(PipelineUI):
                 st.button(
                     tr("btn.generate"),
                     type="primary",
-                    use_container_width=True,
+                    width="stretch",
                     disabled=True,
                     key="digital_human_goods_vaiidation"
                 )
@@ -334,7 +334,7 @@ class DigitalHumanPipelineUI(PipelineUI):
                 st.button(
                     tr("btn.generate"),
                     type="primary",
-                    use_container_width=True,
+                    width="stretch",
                     disabled=True,
                     key="digital_human_digital_disable"
                 )
@@ -348,14 +348,14 @@ class DigitalHumanPipelineUI(PipelineUI):
                 st.button(
                     tr("btn.generate"),
                     type="primary",
-                    use_container_width=True,
+                    width="stretch",
                     disabled=True,
                     key="digital_human_customize_disable"
                 )
                 return
             
             # Generate button
-            if st.button(tr("btn.generate"), type="primary", use_container_width=True, key="digital_human_generate"):
+            if st.button(tr("btn.generate"), type="primary", width="stretch", key="digital_human_generate"):
                 # Validate
                 if not config_manager.validate():
                     st.error(tr("settings.not_configured"))
@@ -658,7 +658,7 @@ class DigitalHumanPipelineUI(PipelineUI):
                                 data=video_bytes,
                                 file_name=video_filename,
                                 mime="video/mp4",
-                                use_container_width=True
+                                width="stretch"
                             )
                     else:
                         st.error(tr("status.video_not_found", path=final_video_path))

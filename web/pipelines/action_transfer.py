@@ -6,7 +6,7 @@ from typing import Any
 import httpx
 import streamlit as st
 from loguru import logger
-from moviepy.editor import VideoFileClip
+from PIL import Image
 
 from pixelle_video.config import config_manager
 from pixelle_video.utils.os_util import create_task_output_dir
@@ -15,6 +15,14 @@ from web.i18n import get_language, tr
 from web.pipelines.base import PipelineUI, register_pipeline_ui
 from web.utils.async_helpers import run_async
 from web.utils.streamlit_helpers import check_and_warn_selfhost_workflow
+
+# moviepy 1.0.3 calls Image.ANTIALIAS in its resize path (moviepy.video.fx.resize),
+# and Pillow 10 removed that alias. LANCZOS is the same filter, so restore the
+# alias before moviepy is imported instead of moving to the moviepy 2.x API.
+if not hasattr(Image, "ANTIALIAS"):
+    Image.ANTIALIAS = Image.LANCZOS
+
+from moviepy.editor import VideoFileClip  # noqa: E402
 
 
 class ActionTransferPipelineUI(PipelineUI):
@@ -167,7 +175,7 @@ class ActionTransferPipelineUI(PipelineUI):
                             # Check if image
                             ext = Path(path).suffix.lower()
                             if ext in [".jpg", ".jpeg", ".png", ".webp"]:
-                                st.image(file, caption=file.name, use_container_width=True)
+                                st.image(file, caption=file.name, width="stretch")
             else:
                 st.info(tr("action_transfer.assets.image_empty_hint"))
             
@@ -244,7 +252,7 @@ class ActionTransferPipelineUI(PipelineUI):
                 st.button(
                     tr("btn.generate"),
                     type="primary",
-                    use_container_width=True,
+                    width="stretch",
                     disabled=True,
                     key="action_transfer_generate_video_disabled"
                 )
@@ -255,7 +263,7 @@ class ActionTransferPipelineUI(PipelineUI):
                 st.button(
                     tr("btn.generate"),
                     type="primary",
-                    use_container_width=True,
+                    width="stretch",
                     disabled=True,
                     key="action_transfer_generate_image_disabled"
                 )
@@ -266,14 +274,14 @@ class ActionTransferPipelineUI(PipelineUI):
                 st.button(
                     tr("btn.generate"),
                     type="primary",
-                    use_container_width=True,
+                    width="stretch",
                     disabled=True,
                     key="action_transfer_generate"
                 )
                 return
 
             # Generate button
-            if st.button(tr("btn.generate"), type="primary", use_container_width=True, key="transfer_generate"):
+            if st.button(tr("btn.generate"), type="primary", width="stretch", key="transfer_generate"):
                 if not config_manager.validate():
                     st.error(tr("settings.not_configured"))
                     st.stop()
@@ -381,7 +389,7 @@ class ActionTransferPipelineUI(PipelineUI):
                                 data=video_bytes,
                                 file_name=video_filename,
                                 mime="video/mp4",
-                                use_container_width=True
+                                width="stretch"
                             )
                     else:
                         st.error(tr("status.video_not_found", path=final_video_path))

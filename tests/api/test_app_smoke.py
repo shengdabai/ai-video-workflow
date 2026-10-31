@@ -65,3 +65,38 @@ def test_request_validation_error_shape(client):
     assert resp.status_code == 422
     detail = resp.json()["detail"]
     assert detail and {"loc", "msg", "type"} <= set(detail[0])
+
+
+def test_orchestrator_tasks_on_fresh_database(tmp_path, monkeypatch):
+    """A fresh service has no database file; the lifespan must create the tables."""
+    import sqlite3
+
+    import api.routers.orchestrator as orchestrator_routes
+    from api.app import app
+
+    db_path = tmp_path / "fresh" / "orchestrator.db"
+    db_path.parent.mkdir()
+    assert not db_path.exists()
+    # The router reads ORCHESTRATOR_DB_PATH once at import time, so point the
+    # module attribute at the fresh path directly.
+    monkeypatch.setattr(orchestrator_routes, "_DB_PATH", str(db_path))
+    monkeypatch.chdir(tmp_path)
+
+    with TestClient(app) as c:
+        resp = c.get("/api/orchestrator/tasks")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    with sqlite3.connect(db_path) as conn:
+        tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {"video_tasks", "shot_tasks", "assets", "packs", "publish_records"} <= tables
+
+    # A second start-up on the same database is a no-op (CREATE TABLE IF NOT EXISTS)
+    # and keeps existing rows.
+    with TestClient(app) as c:
+        created = c.post("/api/orchestrator/tasks", json={"title": "t", "script": "s"})
+        assert created.status_code == 201
+    with TestClient(app) as c:
+        resp = c.get("/api/orchestrator/tasks")
+        assert resp.status_code == 200
+        assert [task["title"] for task in resp.json()] == ["t"]
