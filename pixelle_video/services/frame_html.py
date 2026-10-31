@@ -25,6 +25,7 @@ Linux Environment Requirements:
     Playwright browser install: playwright install --with-deps chromium
 """
 
+import html
 import os
 import re
 import tempfile
@@ -35,6 +36,42 @@ from typing import Any, Dict, Optional
 from loguru import logger
 
 from pixelle_video.utils.template_util import parse_template_size
+
+# Placeholders whose value is a URL. Templates put {{image}} into an HTML
+# attribute, a CSS url("...") and a JavaScript string, where HTML entities are
+# not decoded, so these values are percent-encoded instead of HTML-escaped.
+_URL_PARAMS = frozenset({"image"})
+
+# Characters that could end a quoted attribute, CSS string or JS string, close
+# a <style>/<script> element, or end an unquoted CSS url(...).
+_URL_UNSAFE_CHARS = re.compile(r"[\"'`<>\\()\s\x00-\x1f\x7f]")
+
+
+def _percent_encode(match: re.Match) -> str:
+    return "".join(f"%{byte:02X}" for byte in match.group().encode("utf-8"))
+
+
+def fill_value(param_name: str, value: Any) -> str:
+    """
+    Turn a caller-supplied value into the text that replaces its placeholder.
+
+    - ``None`` becomes an empty string; ``True``/``False`` become ``true``/``false``.
+    - URL placeholders (``image``) are percent-encoded for the characters in
+      ``_URL_UNSAFE_CHARS``; ``%`` and ``&`` are kept, so existing escapes and
+      query strings still work.
+    - Every other value is HTML-escaped with ``html.escape(value, quote=True)``
+      (``&``, ``<``, ``>``, ``"`` and ``'``), so markup in a title, a narration
+      text or a template parameter shows as text. No markup subset is kept:
+      line breaks render through the template's CSS (``white-space: pre-wrap``).
+    """
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    text = str(value)
+    if param_name in _URL_PARAMS:
+        return _URL_UNSAFE_CHARS.sub(_percent_encode, text)
+    return html.escape(text, quote=True)
 
 
 class HTMLFrameGenerator:
@@ -273,8 +310,9 @@ class HTMLFrameGenerator:
         Replace parameter placeholders with actual values
         
         Supports DSL syntax: {{param:type=default}}
-        - If value provided in values dict, use it
-        - Otherwise, use default value from placeholder
+        - If value provided in values dict, use it, escaped by fill_value()
+        - Otherwise, use default value from placeholder (template author's
+          own text, inserted unchanged)
         - If no default, use empty string
         
         Args:
@@ -291,10 +329,7 @@ class HTMLFrameGenerator:
             default_value_str = match.group(3)
             
             if param_name in values:
-                value = values[param_name]
-                if isinstance(value, bool):
-                    return 'true' if value else 'false'
-                return str(value) if value is not None else ''
+                return fill_value(param_name, values[param_name])
             
             elif default_value_str:
                 return default_value_str
