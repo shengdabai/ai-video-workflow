@@ -81,15 +81,15 @@ _PARAM_PATTERN = re.compile(r"\{\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([a-z]+))?(?:=([^}
 
 # A plain CSS number. The placeholder syntax has no way to declare a unit, so
 # the template writes the unit after the placeholder ({{size:number=72}}px).
-_NUMBER_TEXT = re.compile(r"[+-]?(?:\d+(?:\.\d+)?|\.\d+)")
+_NUMBER_TEXT = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)")
 
 _HEX_COLOR = re.compile(r"#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})")
-_COLOR_COMPONENT = r"[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:%|deg)?"
+_COLOR_COMPONENT = r"[+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:%|deg)?"
 _FUNCTION_COLOR = re.compile(
     rf"(?:rgba?|hsla?)\(\s*{_COLOR_COMPONENT}"
     rf"(?:(?:\s*,\s*{_COLOR_COMPONENT}){{2,3}}"
     rf"|(?:\s+{_COLOR_COMPONENT}){{2}}(?:\s*/\s*{_COLOR_COMPONENT})?)\s*\)",
-    re.IGNORECASE,
+    re.IGNORECASE | re.ASCII,
 )
 # CSS Color Module Level 4 named colors, plus transparent and currentcolor.
 _NAMED_COLORS = frozenset(

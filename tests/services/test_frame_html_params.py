@@ -52,6 +52,8 @@ def test_number_accepts_numbers(value, expected):
         "",
         "72 72",
         "calc(1px + 2px)",
+        "\u0667\u0662",  # Arabic-Indic digits
+        "７２",  # fullwidth digits
         True,
         False,
         None,
@@ -100,6 +102,8 @@ def test_color_accepts_colors(value):
         "rgb(1, 2)",
         "rgb(1, 2, var(--x))",
         "rgb(1, 2, 3); color: red",
+        "rgb(\u0661, 2, 3)",  # Arabic-Indic digit
+        "rgb(1\u20022 3)",  # en space as separator
         "url(x)",
         "notacolor",
         "</style><b>",
