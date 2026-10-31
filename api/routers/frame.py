@@ -14,77 +14,16 @@
 Frame/Template rendering endpoints
 """
 
-import re
-from pathlib import Path, PurePosixPath
-from typing import Optional
-
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 
 from api.dependencies import PixelleVideoDep
-from api.pathsafe import file_inside, split_relative_path
 from api.schemas.frame import FrameRenderRequest, FrameRenderResponse, TemplateParamsResponse
+from api.templates_lookup import TEMPLATE_NOT_FOUND, template_file_or_404
 from pixelle_video.services.frame_html import HTMLFrameGenerator
-from pixelle_video.utils.os_util import get_pixelle_video_root_path
-from pixelle_video.utils.template_util import parse_template_size, resolve_template_path
+from pixelle_video.utils.template_util import parse_template_size
 
 router = APIRouter(prefix="/frame", tags=["Frame Rendering"])
-
-# Template keys are "<WIDTH>x<HEIGHT>/<name>.html" (or just "<name>.html" for
-# the default size). The legacy "templates/..." and "data/templates/..."
-# prefixes are accepted and removed first.
-_TEMPLATE_ROOTS = ("data/templates", "templates")
-_TEMPLATE_SIZE = re.compile(r"[0-9]+x[0-9]+")
-_DEFAULT_TEMPLATE_SIZE = "1080x1920"
-_TEMPLATE_NOT_FOUND = "Template not found"
-
-
-def _resolve_template_file(template: Optional[str]) -> Optional[str]:
-    """
-    Map a template key from a request to a template file inside the template roots.
-
-    The key is split into segments with the same rules as the files API
-    (no NUL byte, no absolute path, no ".." segment). What remains must be
-    exactly a size directory and an ``.html`` file name. The file is then
-    looked up with ``resolve_template_path`` (custom templates in
-    data/templates/ take priority over templates/), and the result is accepted
-    only when it is a regular file inside one of the template roots.
-    Returns None for anything else.
-    """
-    parts = split_relative_path(template)
-    if parts is None:
-        return None
-    for prefix in _TEMPLATE_ROOTS:
-        prefix_parts = tuple(prefix.split("/"))
-        if parts[: len(prefix_parts)] == prefix_parts:
-            parts = parts[len(prefix_parts):]
-            break
-    if len(parts) == 1:
-        parts = (_DEFAULT_TEMPLATE_SIZE, parts[0])
-    if len(parts) != 2:
-        return None
-    size, name = parts
-    if not _TEMPLATE_SIZE.fullmatch(size) or PurePosixPath(name).suffix.lower() != ".html":
-        return None
-
-    try:
-        candidate = resolve_template_path(f"{size}/{name}")
-    except (FileNotFoundError, ValueError):
-        return None
-    project_root = Path(get_pixelle_video_root_path())
-    if any(file_inside(candidate, project_root / root) for root in _TEMPLATE_ROOTS):
-        # Keep the path as resolve_template_path built it: the generator
-        # reads the size from its parent directory name.
-        return candidate
-    return None
-
-
-def _template_file_or_404(template: Optional[str]) -> str:
-    template_path = _resolve_template_file(template)
-    if template_path is None:
-        # Same answer for every rejected key; the key itself is not echoed.
-        raise HTTPException(status_code=404, detail=_TEMPLATE_NOT_FOUND)
-    return template_path
 
 
 @router.post("/render", response_model=FrameRenderResponse)
@@ -116,7 +55,7 @@ async def render_frame(
     ```
     """
     # Resolve the template inside templates/ or data/templates/ (404 otherwise)
-    template_path = _template_file_or_404(request.template)
+    template_path = template_file_or_404(request.template).path
 
     try:
         logger.info(f"Frame render request: template={request.template}")
@@ -198,7 +137,7 @@ async def get_template_params(
     ```
     """
     # Resolve the template inside templates/ or data/templates/ (404 otherwise)
-    template_path = _template_file_or_404(template)
+    template_path = template_file_or_404(template).path
 
     try:
         logger.info(f"Get template params: {template}")
@@ -216,7 +155,7 @@ async def get_template_params(
         )
         
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=_TEMPLATE_NOT_FOUND)
+        raise HTTPException(status_code=404, detail=TEMPLATE_NOT_FOUND)
     except Exception as e:
         logger.error(f"Get template params error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

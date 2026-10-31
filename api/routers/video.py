@@ -17,6 +17,7 @@ Supports both synchronous and asynchronous video generation.
 """
 
 import os
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
@@ -28,8 +29,22 @@ from api.schemas.video import (
     VideoGenerateResponse,
 )
 from api.tasks import TaskType, task_manager
+from api.templates_lookup import TemplateFile, template_file_or_404
 
 router = APIRouter(prefix="/video", tags=["Video Generation"])
+
+
+def _checked_inputs(request_body: VideoGenerateRequest) -> Optional[TemplateFile]:
+    """
+    Check the file inputs of a video request before any work starts.
+
+    frame_template must name a template inside templates/ or data/templates/
+    (404 otherwise). Returns the template, or None when the request has no
+    frame_template (the generation code reports that case itself).
+    """
+    if not request_body.frame_template:
+        return None
+    return template_file_or_404(request_body.frame_template)
 
 
 def path_to_url(request: Request, file_path: str) -> str:
@@ -105,17 +120,18 @@ async def generate_video_sync(
     
     Returns path to generated video, duration, and file size.
     """
+    # Check the request's file inputs before any work starts.
+    template_file = _checked_inputs(request_body)
+
     try:
         logger.info(f"Sync video generation: {request_body.text[:50]}...")
-        
+
         # Auto-determine media_width and media_height from template meta tags (required)
-        if not request_body.frame_template:
+        if template_file is None:
             raise ValueError("frame_template is required to determine media size")
-        
+
         from pixelle_video.services.frame_html import HTMLFrameGenerator
-        from pixelle_video.utils.template_util import resolve_template_path
-        template_path = resolve_template_path(request_body.frame_template)
-        generator = HTMLFrameGenerator(template_path)
+        generator = HTMLFrameGenerator(template_file.path)
         media_width, media_height = generator.get_media_size()
         logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
         
@@ -133,7 +149,7 @@ async def generate_video_sync(
             "media_height": media_height,
             "media_workflow": request_body.media_workflow,
             "video_fps": request_body.video_fps,
-            "frame_template": request_body.frame_template,
+            "frame_template": template_file.key,
             "prompt_prefix": request_body.prompt_prefix,
             "bgm_path": request_body.bgm_path,
             "bgm_volume": request_body.bgm_volume,
@@ -199,26 +215,27 @@ async def generate_video_async(
     
     Returns task_id for tracking progress.
     """
+    # Check the request's file inputs before a task is created.
+    template_file = _checked_inputs(request_body)
+
     try:
         logger.info(f"Async video generation: {request_body.text[:50]}...")
-        
+
         # Create task
         task = task_manager.create_task(
             task_type=TaskType.VIDEO_GENERATION,
             request_params=request_body.model_dump()
         )
-        
+
         # Define async execution function
         async def execute_video_generation():
             """Execute video generation in background"""
             # Auto-determine media_width and media_height from template meta tags (required)
-            if not request_body.frame_template:
+            if template_file is None:
                 raise ValueError("frame_template is required to determine media size")
-            
+
             from pixelle_video.services.frame_html import HTMLFrameGenerator
-            from pixelle_video.utils.template_util import resolve_template_path
-            template_path = resolve_template_path(request_body.frame_template)
-            generator = HTMLFrameGenerator(template_path)
+            generator = HTMLFrameGenerator(template_file.path)
             media_width, media_height = generator.get_media_size()
             logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
             
@@ -236,7 +253,7 @@ async def generate_video_async(
                 "media_height": media_height,
                 "media_workflow": request_body.media_workflow,
                 "video_fps": request_body.video_fps,
-                "frame_template": request_body.frame_template,
+                "frame_template": template_file.key,
                 "prompt_prefix": request_body.prompt_prefix,
                 "bgm_path": request_body.bgm_path,
                 "bgm_volume": request_body.bgm_volume,
