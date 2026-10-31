@@ -330,17 +330,37 @@ templates/
 
 ### Template Variables
 
-Templates support the following Jinja2 variables:
+Templates use `{{name}}` placeholders (not Jinja2). Write them without spaces
+inside the braces: `{{title}}` is filled, `{{ title }}` is left as it is.
 
-- `{{ title }}` - Video title (optional)
-- `{{ text }}` - Current scene text content
-- `{{ image }}` - Current scene image (if any)
+- `{{title}}` - Video title (optional)
+- `{{text}}` - Current scene text content
+- `{{image}}` - Current scene image (if any)
 
-Values are inserted as plain text. In `title`, `text` and `template_params` values,
+A template can declare its own parameters, which the Web interface shows as inputs
+and the API accepts in `template_params`:
+
+- `{{name}}` / `{{name=default}}` - text
+- `{{name:number=72}}` - number
+- `{{name:color=#764ba2}}` - color
+- `{{name:bool=false}}` - true/false
+
+Values are inserted as plain text. In `title`, `text` and text-parameter values,
 `&`, `<`, `>`, `"` and `'` are HTML-escaped, so markup in them shows as text.
 In `image` (a URL), quotes, `<`, `>`, `\`, `` ` ``, parentheses and whitespace are
 percent-encoded. Defaults written in the template itself are inserted unchanged.
 To show line breaks in `text`, use `white-space: pre-wrap` in the template CSS.
+
+Typed parameters are checked against their type. A value that does not match is
+replaced by the placeholder's default (or an empty string when it has none):
+
+| Type | Accepted values | Inserted as |
+|------|-----------------|-------------|
+| `number` | a number, or digits with an optional sign and decimal part (`64`, `-1.5`) | the number, without a unit: write the unit in the template (`{{size:number=72}}px`) |
+| `color` | `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb()`/`rgba()`/`hsl()`/`hsla()` with numbers only, or a CSS color name (`red`) | the color as given |
+| `bool` | `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off` | `true` or `false` |
+
+A type declared on one placeholder applies to every placeholder with the same name.
 
 ### Example Template
 
@@ -372,7 +392,7 @@ To show line breaks in `text`, use `white-space: pre-wrap` in the template CSS.
 </head>
 <body>
     <div class="content">
-        <div class="text">{{ text }}</div>
+        <div class="text">{{text}}</div>
     </div>
 </body>
 </html>

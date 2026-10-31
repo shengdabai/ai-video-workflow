@@ -26,8 +26,10 @@ Linux Environment Requirements:
 """
 
 import html
+import math
 import os
 import re
+import reprlib
 import tempfile
 import uuid
 from pathlib import Path
@@ -72,6 +74,117 @@ def fill_value(param_name: str, value: Any) -> str:
     if param_name in _URL_PARAMS:
         return _URL_UNSAFE_CHARS.sub(_percent_encode, text)
     return html.escape(text, quote=True)
+
+
+# Placeholder syntax: {{name}}, {{name=default}}, {{name:type}}, {{name:type=default}}
+_PARAM_PATTERN = re.compile(r"\{\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([a-z]+))?(?:=([^}]+))?\}\}")
+
+# A plain CSS number. The placeholder syntax has no way to declare a unit, so
+# the template writes the unit after the placeholder ({{size:number=72}}px).
+_NUMBER_TEXT = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)")
+
+_HEX_COLOR = re.compile(r"#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})")
+_COLOR_COMPONENT = r"[+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:%|deg)?"
+_FUNCTION_COLOR = re.compile(
+    rf"(?:rgba?|hsla?)\(\s*{_COLOR_COMPONENT}"
+    rf"(?:(?:\s*,\s*{_COLOR_COMPONENT}){{2,3}}"
+    rf"|(?:\s+{_COLOR_COMPONENT}){{2}}(?:\s*/\s*{_COLOR_COMPONENT})?)\s*\)",
+    re.IGNORECASE | re.ASCII,
+)
+# CSS Color Module Level 4 named colors, plus transparent and currentcolor.
+_NAMED_COLORS = frozenset(
+    """
+    aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond
+    blue blueviolet brown burlywood cadetblue chartreuse chocolate coral
+    cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray
+    darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid
+    darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey
+    darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue
+    firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod
+    gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki
+    lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan
+    lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon
+    lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue
+    lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue
+    mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen
+    mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin
+    navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod
+    palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum
+    powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon
+    sandybrown seagreen seashell sienna silver skyblue slateblue slategray
+    slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet
+    wheat white whitesmoke yellow yellowgreen transparent currentcolor
+    """.split()
+)
+_BOOL_WORDS = {
+    "true": "true", "1": "true", "yes": "true", "on": "true",
+    "false": "false", "0": "false", "no": "false", "off": "false",
+}
+
+
+def _coerce_number(value: Any) -> Optional[str]:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return repr(value) if math.isfinite(value) else None
+    if isinstance(value, str) and _NUMBER_TEXT.fullmatch(value.strip()):
+        return value.strip()
+    return None
+
+
+def _coerce_color(value: Any) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if _HEX_COLOR.fullmatch(text) or _FUNCTION_COLOR.fullmatch(text):
+        return text
+    if text.lower() in _NAMED_COLORS:
+        return text
+    return None
+
+
+def _coerce_bool(value: Any) -> Optional[str]:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, str):
+        return _BOOL_WORDS.get(value.strip().lower())
+    return None
+
+
+_COERCERS = {"number": _coerce_number, "color": _coerce_color, "bool": _coerce_bool}
+
+
+def coerce_param(declared_type: str, value: Any, default: str, param_name: str = "") -> str:
+    """
+    Turn a caller-supplied value into the text for a placeholder of a declared type.
+
+    - ``number``: an ``int``/``float`` (not ``bool``, not NaN/infinity) or a string
+      of digits with an optional sign and decimal part. No unit: the template
+      writes the unit after the placeholder.
+    - ``color``: ``#rgb``, ``#rgba``, ``#rrggbb``, ``#rrggbbaa``,
+      ``rgb()``/``rgba()``/``hsl()``/``hsla()`` with numeric components only, or a
+      CSS named color.
+    - ``bool``: ``True``/``False`` or one of true/false, 1/0, yes/no, on/off;
+      inserted as ``true``/``false``.
+    - Any other type (``text``) goes through :func:`fill_value`.
+
+    A number, color or bool value that does not match its type is replaced by
+    ``default`` (the default written in the placeholder, or ``""``), so a value
+    such as ``72px; background-image: url(...)`` never reaches a ``<style>`` block.
+    """
+    coerce = _COERCERS.get(declared_type)
+    if coerce is None:
+        return fill_value(param_name, value)
+    coerced = coerce(value)
+    if coerced is None:
+        logger.debug(
+            f"Template parameter '{param_name}' ({declared_type}) got "
+            f"{reprlib.repr(value)}, which is not a valid {declared_type}; using the default"
+        )
+        return default
+    return coerced
 
 
 class HTMLFrameGenerator:
@@ -231,12 +344,10 @@ class HTMLFrameGenerator:
             }
         """
         PRESET_PARAMS = {'title', 'text', 'image', 'index'}
-        
-        PARAM_PATTERN = r'\{\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([a-z]+))?(?:=([^}]+))?\}\}'
-        
+
         params = {}
-        
-        for match in re.finditer(PARAM_PATTERN, self.template):
+
+        for match in _PARAM_PATTERN.finditer(self.template):
             param_name = match.group(1)
             param_type = match.group(2) or 'text'
             default_value = match.group(3)
@@ -310,34 +421,49 @@ class HTMLFrameGenerator:
         Replace parameter placeholders with actual values
         
         Supports DSL syntax: {{param:type=default}}
-        - If value provided in values dict, use it, escaped by fill_value()
+        - If value provided in values dict, use it, checked against the
+          declared type by coerce_param() (text values are escaped by
+          fill_value(); a number/color/bool value that does not match its
+          type is replaced by the default)
         - Otherwise, use default value from placeholder (template author's
           own text, inserted unchanged)
         - If no default, use empty string
-        
+
+        The declared type of a parameter applies to every placeholder with
+        that name, so ``{{size:number=72}}`` and a later bare ``{{size}}`` are
+        both filled as numbers.
+
         Args:
             html: HTML template content
             values: Dictionary of parameter values
-        
+
         Returns:
             HTML with placeholders replaced
         """
-        PARAM_PATTERN = r'\{\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([a-z]+))?(?:=([^}]+))?\}\}'
-        
+        declared_types: Dict[str, str] = {}
+        for match in _PARAM_PATTERN.finditer(html):
+            if match.group(2) in _COERCERS:
+                declared_types.setdefault(match.group(1), match.group(2))
+
         def replacer(match):
             param_name = match.group(1)
             default_value_str = match.group(3)
-            
+
             if param_name in values:
-                return fill_value(param_name, values[param_name])
-            
+                return coerce_param(
+                    declared_types.get(param_name, "text"),
+                    values[param_name],
+                    default_value_str or "",
+                    param_name=param_name,
+                )
+
             elif default_value_str:
                 return default_value_str
-            
+
             else:
                 return ''
-        
-        return re.sub(PARAM_PATTERN, replacer, html)
+
+        return _PARAM_PATTERN.sub(replacer, html)
 
     @classmethod
     async def _ensure_browser(cls):
