@@ -45,14 +45,22 @@ COPY pyproject.toml uv.lock README.md ./
 COPY pixelle_video ./pixelle_video
 COPY orchestrator ./orchestrator
 
-# Create virtual environment and install dependencies
-# Use -i flag to specify mirror when USE_CN_MIRROR=true
+# Create virtual environment and install the versions pinned in uv.lock, the
+# same lockfile CI installs from (`uv sync --locked`). Only the runtime
+# dependencies are installed; the "dev" extra (pytest, ruff) is left out.
+# `uv sync --frozen` downloads from the URLs recorded in uv.lock and ignores
+# index options, so with USE_CN_MIRROR=true the locked versions are exported
+# to a requirements file (with hashes) and installed from the mirror instead.
 RUN export UV_HTTP_TIMEOUT=300 && \
     uv venv && \
     if [ "$USE_CN_MIRROR" = "true" ]; then \
-        uv pip install -e . -i https://pypi.tuna.tsinghua.edu.cn/simple; \
+        uv export --frozen --no-dev --no-emit-project --no-header \
+            --output-file /tmp/requirements.lock.txt && \
+        uv pip install -r /tmp/requirements.lock.txt -i https://pypi.tuna.tsinghua.edu.cn/simple && \
+        uv pip install --no-deps -e . -i https://pypi.tuna.tsinghua.edu.cn/simple && \
+        rm /tmp/requirements.lock.txt; \
     else \
-        uv pip install -e .; \
+        uv sync --frozen --no-dev; \
     fi && \
     .venv/bin/playwright install --with-deps chromium
 

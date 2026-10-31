@@ -16,12 +16,14 @@ File service endpoints
 Provides access to generated files (videos, images, audio) and resource files.
 """
 
-from pathlib import Path, PurePosixPath, PureWindowsPath
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from loguru import logger
+
+from api.pathsafe import resolve_file_inside, split_relative_path
 
 router = APIRouter(prefix="/files", tags=["Files"])
 
@@ -49,12 +51,8 @@ def _resolve_served_file(file_path: str) -> Optional[Path]:
     is absolute, contains a ".." segment, or resolves (after following
     symlinks) to anything that is not a regular file inside its root.
     """
-    if not file_path or "\x00" in file_path:
-        return None
-    if PurePosixPath(file_path).is_absolute() or PureWindowsPath(file_path).is_absolute():
-        return None
-    parts = PurePosixPath(file_path.replace("\\", "/")).parts
-    if not parts or ".." in parts:
+    parts = split_relative_path(file_path)
+    if parts is None:
         return None
 
     root_rel = _DEFAULT_ROOT
@@ -66,16 +64,8 @@ def _resolve_served_file(file_path: str) -> Optional[Path]:
             rel_parts = parts[len(candidate_parts):]
             break
 
-    try:
-        root = (Path.cwd() / root_rel).resolve()
-        resolved = Path(root, *rel_parts).resolve()
-    except (OSError, RuntimeError, ValueError):
-        return None
-    if resolved == root or not resolved.is_relative_to(root):
-        return None
-    if not resolved.is_file():
-        return None
-    return resolved
+    # root_rel is relative, so it is resolved against the working directory.
+    return resolve_file_inside(root_rel, *rel_parts)
 
 
 @router.get("/{file_path:path}")
