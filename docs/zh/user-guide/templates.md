@@ -328,16 +328,34 @@ templates/
 
 ### 模板变量
 
-模板支持以下 Jinja2 变量：
+模板使用 `{{name}}` 占位符（不是 Jinja2）。花括号内不要加空格：
+`{{title}}` 会被替换，`{{ title }}` 会原样保留。
 
-- `{{ title }}` - 视频标题（可选）
-- `{{ text }}` - 当前分镜的文本内容
-- `{{ image }}` - 当前分镜的图片（如果有）
+- `{{title}}` - 视频标题（可选）
+- `{{text}}` - 当前分镜的文本内容
+- `{{image}}` - 当前分镜的图片（如果有）
 
-变量值按纯文本插入。`title`、`text` 和 `template_params` 的值里的
+模板可以声明自己的参数，Web 界面会显示对应的输入框，API 通过 `template_params` 传值：
+
+- `{{name}}` / `{{name=默认值}}` - 文本
+- `{{name:number=72}}` - 数字
+- `{{name:color=#764ba2}}` - 颜色
+- `{{name:bool=false}}` - 真/假
+
+变量值按纯文本插入。`title`、`text` 和文本参数的值里的
 `&`、`<`、`>`、`"`、`'` 会做 HTML 转义，其中的标签按文字显示。
 `image`（URL）里的引号、`<`、`>`、`\`、`` ` ``、括号和空白字符会做百分号编码。
 模板里自己写的默认值原样插入。要在 `text` 中显示换行，请在模板 CSS 中使用 `white-space: pre-wrap`。
+
+带类型的参数会按类型检查。值不符合类型时，改用占位符里的默认值（没有默认值时为空字符串）：
+
+| 类型 | 接受的值 | 插入内容 |
+|------|----------|----------|
+| `number` | 数字，或带可选正负号和小数部分的数字串（`64`、`-1.5`） | 数字本身，不带单位：单位写在模板里（`{{size:number=72}}px`） |
+| `color` | `#rgb`、`#rgba`、`#rrggbb`、`#rrggbbaa`，只含数字的 `rgb()`/`rgba()`/`hsl()`/`hsla()`，或 CSS 颜色名（`red`） | 原样插入 |
+| `bool` | `true`/`false`、`1`/`0`、`yes`/`no`、`on`/`off` | `true` 或 `false` |
+
+同名占位符中只要有一个声明了类型，所有同名占位符都按这个类型处理。
 
 ### 示例模板
 
@@ -369,7 +387,7 @@ templates/
 </head>
 <body>
     <div class="content">
-        <div class="text">{{ text }}</div>
+        <div class="text">{{text}}</div>
     </div>
 </body>
 </html>
