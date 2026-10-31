@@ -75,6 +75,88 @@ def file_inside(path: Union[str, Path], root: Union[str, Path]) -> Optional[Path
     return _regular_file_inside(resolved, root_resolved)
 
 
+# A request's bgm_path names an audio file in one of these directories
+# (relative to the working directory, like the files API). "bgm/<name>",
+# "data/bgm/<name>" and "output/<path>" name the directory; any other relative
+# path, such as a bare "<name>", is looked up in data/bgm/ first, then bgm/,
+# the same order the video pipeline uses.
+BGM_ROOTS = ("data/bgm", "bgm", "output")
+BGM_SEARCH_ROOTS = ("data/bgm", "bgm")
+BGM_SUFFIXES = (".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac")
+BGM_PATH_ERROR = "bgm_path must name an audio file in bgm/, data/bgm/ or output/"
+
+
+def resolve_bgm_file(bgm_path: Optional[str]) -> Optional[Path]:
+    """
+    Map a request's bgm_path to an audio file inside the BGM/output roots.
+
+    Uses the same rules as the files API: no NUL byte, no absolute path, no
+    ".." segment, and the resolved file (symlinks followed) must be a regular
+    file inside its root with an audio suffix. Returns None for anything else.
+    """
+    parts = split_relative_path(bgm_path)
+    if parts is None:
+        return None
+    resolved = None
+    for root in BGM_ROOTS:
+        root_parts = tuple(root.split("/"))
+        if len(parts) > len(root_parts) and parts[: len(root_parts)] == root_parts:
+            resolved = resolve_file_inside(root, *parts[len(root_parts):])
+            break
+    else:
+        for root in BGM_SEARCH_ROOTS:
+            resolved = resolve_file_inside(root, *parts)
+            if resolved is not None:
+                break
+    if resolved is None or resolved.suffix.lower() not in BGM_SUFFIXES:
+        return None
+    return resolved
+
+
+# Request fields that hold a media URL or a local media file (the frame
+# image, the voice-cloning ref_audio) may name local files in these
+# directories (relative to the working directory, like the files API).
+MEDIA_INPUT_ROOTS = ("output", "data", "resources")
+IMAGE_INPUT_SUFFIXES = (
+    ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp",
+    ".mp4", ".webm", ".mov",  # video media for video templates
+)
+AUDIO_INPUT_SUFFIXES = BGM_SUFFIXES
+REF_AUDIO_ERROR = "ref_audio must be an http(s) URL or an audio file in output/, data/ or resources/"
+
+
+def resolve_media_input(value: Optional[str], suffixes: tuple[str, ...]) -> Optional[str]:
+    """
+    Check a request field that holds a media URL or a local media file.
+
+    An http:// or https:// URL is returned unchanged. Anything else is a
+    local path: a relative path must start with one of MEDIA_INPUT_ROOTS
+    ("output/...", "data/...", "resources/...") and is checked with the same
+    rules as the files API; an absolute path must point inside one of these
+    roots. The resolved file (symlinks followed) must be a regular file with
+    one of ``suffixes``; its resolved path is returned. Returns None for
+    anything else, including other URL schemes such as ``file:``.
+    """
+    if not value or "\x00" in value:
+        return None
+    if value.startswith(("http://", "https://")):
+        return value
+
+    resolved = None
+    if Path(value).is_absolute():
+        for root in MEDIA_INPUT_ROOTS:
+            resolved = file_inside(value, root)
+            if resolved is not None:
+                break
+    else:
+        parts = split_relative_path(value)
+        if parts is not None and len(parts) > 1 and parts[0] in MEDIA_INPUT_ROOTS:
+            resolved = resolve_file_inside(parts[0], *parts[1:])
+    if resolved is None or resolved.suffix.lower() not in suffixes:
+        return None
+    return str(resolved)
+
+
 def _regular_file_inside(resolved: Path, root_resolved: Path) -> Optional[Path]:
     if resolved == root_resolved or not resolved.is_relative_to(root_resolved):
         return None

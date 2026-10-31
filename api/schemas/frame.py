@@ -27,7 +27,11 @@ class FrameRenderRequest(BaseModel):
     )
     title: Optional[str] = Field(None, description="Frame title (optional)")
     text: str = Field(..., description="Frame text content")
-    image: Optional[str] = Field(None, description="Image path or URL (optional)")
+    image: Optional[str] = Field(
+        None,
+        description="Image URL (http/https or data:image/), or a path to an image or video "
+                    "file in output/, data/ or resources/ (optional)",
+    )
     
     class Config:
         json_schema_extra = {

@@ -17,19 +17,69 @@ Supports both synchronous and asynchronous video generation.
 """
 
 import os
+from typing import NamedTuple, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
 
 from api.dependencies import PixelleVideoDep
+from api.pathsafe import (
+    AUDIO_INPUT_SUFFIXES,
+    BGM_PATH_ERROR,
+    REF_AUDIO_ERROR,
+    resolve_bgm_file,
+    resolve_media_input,
+)
 from api.schemas.video import (
     VideoGenerateAsyncResponse,
     VideoGenerateRequest,
     VideoGenerateResponse,
 )
 from api.tasks import TaskType, task_manager
+from api.templates_lookup import TemplateFile, template_file_or_404
 
 router = APIRouter(prefix="/video", tags=["Video Generation"])
+
+
+class _CheckedInputs(NamedTuple):
+    template: Optional[TemplateFile]
+    """None when the request has no frame_template (reported later)."""
+    bgm_path: Optional[str]
+    """Resolved BGM file, or None for no BGM."""
+    ref_audio: Optional[str]
+    """http(s) URL or resolved audio file, or None."""
+
+
+def _checked_inputs(request_body: VideoGenerateRequest) -> _CheckedInputs:
+    """
+    Check the file inputs of a video request before any work starts.
+
+    - frame_template must name a template inside templates/ or
+      data/templates/ (404 otherwise).
+    - bgm_path must name an audio file inside bgm/, data/bgm/ or output/
+      (400 otherwise); the pipeline gets the resolved path.
+    - ref_audio must be an http(s) URL or an audio file inside output/,
+      data/ or resources/ (400 otherwise), because a ComfyUI TTS workflow
+      uploads the file to the ComfyUI server.
+    """
+    template = None
+    if request_body.frame_template:
+        template = template_file_or_404(request_body.frame_template)
+
+    bgm_path = None
+    if request_body.bgm_path:
+        bgm_file = resolve_bgm_file(request_body.bgm_path)
+        if bgm_file is None:
+            raise HTTPException(status_code=400, detail=BGM_PATH_ERROR)
+        bgm_path = str(bgm_file)
+
+    ref_audio = None
+    if request_body.ref_audio:
+        ref_audio = resolve_media_input(request_body.ref_audio, AUDIO_INPUT_SUFFIXES)
+        if ref_audio is None:
+            raise HTTPException(status_code=400, detail=REF_AUDIO_ERROR)
+
+    return _CheckedInputs(template=template, bgm_path=bgm_path, ref_audio=ref_audio)
 
 
 def path_to_url(request: Request, file_path: str) -> str:
@@ -105,17 +155,18 @@ async def generate_video_sync(
     
     Returns path to generated video, duration, and file size.
     """
+    # Check the request's file inputs before any work starts.
+    inputs = _checked_inputs(request_body)
+
     try:
         logger.info(f"Sync video generation: {request_body.text[:50]}...")
-        
+
         # Auto-determine media_width and media_height from template meta tags (required)
-        if not request_body.frame_template:
+        if inputs.template is None:
             raise ValueError("frame_template is required to determine media size")
-        
+
         from pixelle_video.services.frame_html import HTMLFrameGenerator
-        from pixelle_video.utils.template_util import resolve_template_path
-        template_path = resolve_template_path(request_body.frame_template)
-        generator = HTMLFrameGenerator(template_path)
+        generator = HTMLFrameGenerator(inputs.template.path)
         media_width, media_height = generator.get_media_size()
         logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
         
@@ -133,9 +184,9 @@ async def generate_video_sync(
             "media_height": media_height,
             "media_workflow": request_body.media_workflow,
             "video_fps": request_body.video_fps,
-            "frame_template": request_body.frame_template,
+            "frame_template": inputs.template.key,
             "prompt_prefix": request_body.prompt_prefix,
-            "bgm_path": request_body.bgm_path,
+            "bgm_path": inputs.bgm_path,
             "bgm_volume": request_body.bgm_volume,
         }
         
@@ -144,8 +195,8 @@ async def generate_video_sync(
             video_params["tts_workflow"] = request_body.tts_workflow
         
         # Add ref_audio if specified
-        if request_body.ref_audio:
-            video_params["ref_audio"] = request_body.ref_audio
+        if inputs.ref_audio:
+            video_params["ref_audio"] = inputs.ref_audio
         
         # Legacy voice_id support (deprecated)
         if request_body.voice_id:
@@ -199,26 +250,27 @@ async def generate_video_async(
     
     Returns task_id for tracking progress.
     """
+    # Check the request's file inputs before a task is created.
+    inputs = _checked_inputs(request_body)
+
     try:
         logger.info(f"Async video generation: {request_body.text[:50]}...")
-        
+
         # Create task
         task = task_manager.create_task(
             task_type=TaskType.VIDEO_GENERATION,
             request_params=request_body.model_dump()
         )
-        
+
         # Define async execution function
         async def execute_video_generation():
             """Execute video generation in background"""
             # Auto-determine media_width and media_height from template meta tags (required)
-            if not request_body.frame_template:
+            if inputs.template is None:
                 raise ValueError("frame_template is required to determine media size")
-            
+
             from pixelle_video.services.frame_html import HTMLFrameGenerator
-            from pixelle_video.utils.template_util import resolve_template_path
-            template_path = resolve_template_path(request_body.frame_template)
-            generator = HTMLFrameGenerator(template_path)
+            generator = HTMLFrameGenerator(inputs.template.path)
             media_width, media_height = generator.get_media_size()
             logger.debug(f"Auto-determined media size from template: {media_width}x{media_height}")
             
@@ -236,9 +288,9 @@ async def generate_video_async(
                 "media_height": media_height,
                 "media_workflow": request_body.media_workflow,
                 "video_fps": request_body.video_fps,
-                "frame_template": request_body.frame_template,
+                "frame_template": inputs.template.key,
                 "prompt_prefix": request_body.prompt_prefix,
-                "bgm_path": request_body.bgm_path,
+                "bgm_path": inputs.bgm_path,
                 "bgm_volume": request_body.bgm_volume,
                 # Progress callback can be added here if needed
                 # "progress_callback": lambda event: task_manager.update_progress(...)
@@ -249,8 +301,8 @@ async def generate_video_async(
                 video_params["tts_workflow"] = request_body.tts_workflow
             
             # Add ref_audio if specified
-            if request_body.ref_audio:
-                video_params["ref_audio"] = request_body.ref_audio
+            if inputs.ref_audio:
+                video_params["ref_audio"] = inputs.ref_audio
             
             # Legacy voice_id support (deprecated)
             if request_body.voice_id:
