@@ -336,6 +336,12 @@ Templates support the following Jinja2 variables:
 - `{{ text }}` - Current scene text content
 - `{{ image }}` - Current scene image (if any)
 
+Values are inserted as plain text. In `title`, `text` and `template_params` values,
+`&`, `<`, `>`, `"` and `'` are HTML-escaped, so markup in them shows as text.
+In `image` (a URL), quotes, `<`, `>`, `\`, `` ` ``, parentheses and whitespace are
+percent-encoded. Defaults written in the template itself are inserted unchanged.
+To show line breaks in `text`, use `white-space: pre-wrap` in the template CSS.
+
 ### Example Template
 
 ```html
